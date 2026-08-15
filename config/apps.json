@@ -1,264 +1,45 @@
 {
   "Apps": [
-    {
-      "Name": "Chrome",
-      "Winget": "Google.Chrome",
-      "Choco": "googlechrome"
-    },
-    {
-      "Name": "WhatsApp Desktop",
-      "Winget": "msstore:9NKSQGP7F2NH",
-      "Choco": "na"
-    },
-    {
-      "Name": "Adobe Acrobat Reader",
-      "Winget": "Adobe.Acrobat.Reader.64-bit",
-      "Choco": "adobereader"
-    },
-    {
-      "Name": "Visual C++ Redistributable x64",
-      "Winget": "Microsoft.VCRedist.2015+.x64",
-      "Choco": "vcredist2015"
-    },
-    {
-      "Name": "Visual C++ Redistributable x86",
-      "Winget": "Microsoft.VCRedist.2015+.x86",
-      "Choco": "vcredist2015"
-    },
-    {
-      "Name": ".NET Desktop Runtime 8",
-      "Winget": "Microsoft.DotNet.DesktopRuntime.8",
-      "Choco": "dotnet-8.0-runtime"
-    },
-    {
-      "Name": "7-Zip",
-      "Winget": "7zip.7zip",
-      "Choco": "7zip"
-    },
-    {
-      "Name": "VLC",
-      "Winget": "VideoLAN.VLC",
-      "Choco": "vlc"
-    },
-    {
-      "Name": "Revo Uninstaller",
-      "Winget": "RevoUninstaller.RevoUninstaller",
-      "Choco": "revo-uninstaller"
-    },
-    {
-      "Name": "Everything",
-      "Winget": "voidtools.Everything",
-      "Choco": "everything"
-    },
-    {
-      "Name": "Microsoft PC Manager",
-      "Winget": "Microsoft.PCManager",
-      "Choco": "na"
-    },
-    {
-      "Name": "BleachBit",
-      "Winget": "BleachBit.BleachBit",
-      "Choco": "bleachbit"
-    },
-    {
-      "Name": "DiskSavvy",
-      "Winget": "Flexense.DiskSavvy",
-      "Choco": "disksavvy"
-    },
-    {
-      "Name": "Defraggler",
-      "Winget": "Piriform.Defraggler",
-      "Choco": "defraggler"
-    },
-    {
-      "Name": "Microsoft Teams",
-      "Winget": "Microsoft.Teams",
-      "Choco": "microsoft-teams"
-    },
-    {
-      "Name": "HWiNFO",
-      "Winget": "REALiX.HWiNFO",
-      "Choco": "hwinfo"
-    },
-    {
-      "Name": "CPU-Z",
-      "Winget": "CPUID.CPU-Z",
-      "Choco": "cpu-z"
-    },
-    {
-      "Name": "GPU-Z",
-      "Winget": "TechPowerUp.GPU-Z",
-      "Choco": "gpu-z"
-    },
-    {
-      "Name": "CrystalDiskInfo",
-      "Winget": "CrystalDewWorld.CrystalDiskInfo",
-      "Choco": "crystaldiskinfo"
-    },
-    {
-      "Name": "CrystalDiskMark",
-      "Winget": "CrystalDewWorld.CrystalDiskMark",
-      "Choco": "crystaldiskmark"
-    },
-    {
-      "Name": "Snappy Driver Installer Origin",
-      "Winget": "GlennDelahoy.SnappyDriverInstallerOrigin",
-      "Choco": "sdio"
-    },
-    {
-      "Name": "Autoruns",
-      "Winget": "Microsoft.Sysinternals.Autoruns",
-      "Choco": "autoruns"
-    },
-    {
-      "Name": "Process Explorer",
-      "Winget": "Microsoft.Sysinternals.ProcessExplorer",
-      "Choco": "procexp"
-    },
-    {
-      "Name": "DDU",
-      "Winget": "Wagnardsoft.DisplayDriverUninstaller",
-      "Choco": "display-driver-uninstaller"
-    },
-    {
-      "Name": "NVCleanstall",
-      "Winget": "TechPowerUp.NVCleanstall",
-      "Choco": "na"
-    },
-    {
-      "Name": "TCPView",
-      "Winget": "Microsoft.Sysinternals.TCPView",
-      "Choco": "tcpview"
-    },
-    {
-      "Name": "Advanced IP Scanner",
-      "Winget": "Famatech.AdvancedIPScanner",
-      "Choco": "advanced-ip-scanner"
-    },
-    {
-      "Name": "Nmap",
-      "Winget": "Insecure.Nmap",
-      "Choco": "nmap"
-    },
-    {
-      "Name": "HandBrake",
-      "Winget": "HandBrake.HandBrake",
-      "Choco": "handbrake"
-    },
-    {
-      "Name": "OBS Studio",
-      "Winget": "OBSProject.OBSStudio",
-      "Choco": "obs-studio"
-    },
-    {
-      "Name": "ShareX",
-      "Winget": "ShareX.ShareX",
-      "Choco": "sharex"
-    },
-    {
-      "Name": "Spotify",
-      "Winget": "Spotify.Spotify",
-      "Choco": "spotify"
-    },
-    {
-      "Name": "JDownloader",
-      "Winget": "JDownloader.JDownloader",
-      "Choco": "jdownloader"
-    },
-    {
-      "Name": "Steam",
-      "Winget": "Valve.Steam",
-      "Choco": "steam-client"
-    },
-    {
-      "Name": "Discord",
-      "Winget": "Discord.Discord",
-      "Choco": "discord"
-    },
-    {
-      "Name": "MSI Afterburner",
-      "Winget": "Guru3D.Afterburner",
-      "Choco": "msiafterburner"
-    },
-    {
-      "Name": "Zoom",
-      "Winget": "Zoom.Zoom",
-      "Choco": "zoom"
-    },
-    {
-      "Name": "AnyDesk",
-      "Winget": "AnyDesk.AnyDesk",
-      "Choco": "anydesk"
-    },
-    {
-      "Name": "System Informer",
-      "Winget": "WinsiderSS.SystemInformer",
-      "Choco": "systeminformer"
-    },
-    {
-      "Name": "Wireshark",
-      "Winget": "WiresharkFoundation.Wireshark",
-      "Choco": "wireshark"
-    },
-    {
-      "Name": "Rufus",
-      "Winget": "Rufus.Rufus",
-      "Choco": "rufus"
-    }
+    { "Name": "Chrome", "Winget": "Google.Chrome", "Choco": "googlechrome" },
+    { "Name": "WhatsApp Desktop", "Winget": "msstore:9NKSQGP7F2NH", "Choco": "na" },
+    { "Name": "Adobe Acrobat Reader", "Winget": "Adobe.Acrobat.Reader.64-bit", "Choco": "adobereader" },
+    { "Name": "Visual C++ Redistributable x64", "Winget": "Microsoft.VCRedist.2015+.x64", "Choco": "vcredist2015" },
+    { "Name": "Visual C++ Redistributable x86", "Winget": "Microsoft.VCRedist.2015+.x86", "Choco": "vcredist2015" },
+    { "Name": ".NET Desktop Runtime 8", "Winget": "Microsoft.DotNet.DesktopRuntime.8", "Choco": "dotnet-8.0-runtime" },
+    { "Name": "VLC", "Winget": "VideoLAN.VLC", "Choco": "vlc" },
+    { "Name": "7-Zip", "Winget": "7zip.7zip", "Choco": "7zip" },
+    { "Name": "qBittorrent", "Winget": "qBittorrent.qBittorrent", "Choco": "qbittorrent" },
+    { "Name": "Revo Uninstaller", "Winget": "RevoUninstaller.RevoUninstaller", "Choco": "revo-uninstaller" },
+    { "Name": "HWiNFO", "Winget": "REALiX.HWiNFO", "Choco": "hwinfo" },
+    { "Name": "Snappy Driver Installer Origin", "Winget": "GlennDelahoy.SnappyDriverInstallerOrigin", "Choco": "sdio" },
+    { "Name": "Process Lasso", "Winget": "BitSum.ProcessLasso", "Choco": "plasso" },
+    { "Name": "Steam", "Winget": "Valve.Steam", "Choco": "steam-client" },
+    { "Name": "Discord", "Winget": "Discord.Discord", "Choco": "discord" },
+    { "Name": "OBS Studio", "Winget": "OBSProject.OBSStudio", "Choco": "obs-studio" },
+    { "Name": "NVCleanstall", "Winget": "TechPowerUp.NVCleanstall", "Choco": "na" },
+    { "Name": "MSI Afterburner", "Winget": "Guru3D.Afterburner", "Choco": "msiafterburner" },
+    { "Name": "AnyDesk", "Winget": "AnyDesk.AnyDesk", "Choco": "anydesk" }
   ],
   "Bundles": [
     {
       "Name": "Level 1 : Office",
       "Cumulative": false,
-      "Apps": [
-        "Chrome",
-        "WhatsApp Desktop",
-        "Adobe Acrobat Reader",
-        "Visual C++ Redistributable x64",
-        "Visual C++ Redistributable x86",
-        ".NET Desktop Runtime 8",
-        "7-Zip",
-        "VLC"
-      ]
+      "Apps": ["Chrome", "WhatsApp Desktop", "Adobe Acrobat Reader", "Visual C++ Redistributable x64", "Visual C++ Redistributable x86", ".NET Desktop Runtime 8", "VLC", "7-Zip", "qBittorrent"]
     },
     {
       "Name": "Level 2 : Laptop",
       "Cumulative": true,
-      "Apps": [
-        "Revo Uninstaller",
-        "Everything",
-        "Microsoft PC Manager",
-        "BleachBit",
-        "DiskSavvy",
-        "Microsoft Teams",
-        "Defraggler"
-      ]
+      "Apps": ["Revo Uninstaller"]
     },
     {
       "Name": "Level 3 : Performance",
       "Cumulative": true,
-      "Apps": [
-        "HWiNFO",
-        "CPU-Z",
-        "GPU-Z",
-        "CrystalDiskInfo",
-        "CrystalDiskMark",
-        "Snappy Driver Installer Origin"
-      ]
+      "Apps": ["HWiNFO", "Snappy Driver Installer Origin", "Process Lasso"]
     },
     {
       "Name": "Level 4 : Gaming",
       "Cumulative": true,
-      "Apps": [
-        "Steam",
-        "Discord",
-        "OBS Studio",
-        "MSI Afterburner",
-        "NVCleanstall",
-        "DDU",
-        "Autoruns",
-        "Spotify"
-      ]
+      "Apps": ["Steam", "Discord", "OBS Studio", "NVCleanstall", "MSI Afterburner"]
     }
   ]
 }
