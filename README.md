@@ -13,7 +13,7 @@ Designed to provide a convenient set of tools for maintaining and configuring Wi
 Open **PowerShell** or **Windows Terminal** as Administrator and run:
 
 ```powershell
-irm "https://raw.githubusercontent.com/Vengeance239/aickarawinutil/main/aickarawinutil.ps1" | iex
+irm https://raw.githubusercontent.com/Vengeance239/aickarawinutil/refs/heads/main/aickarawinutil.ps1 | iex
 ```
 
 ---
