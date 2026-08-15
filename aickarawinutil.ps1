@@ -6,7 +6,6 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$AccessCode = '89385899',
     [switch]$SkipBootAnimation,
     [switch]$NoRemotePrompt
 )
@@ -18,6 +17,9 @@ $script:AppName = 'AICKARAWINUTIL'
 $script:DataRoot = if (Test-Path "$env:ProgramData") { Join-Path $env:ProgramData 'AICKARAWINUTIL' } else { Join-Path $env:LOCALAPPDATA 'AICKARAWINUTIL' }
 $script:LogPath = Join-Path $script:DataRoot 'AICKARAWINUTIL.log'
 $script:StatePath = Join-Path $script:DataRoot 'undo-state.json'
+$script:ConfigRoot = Join-Path $PSScriptRoot 'config'
+$script:AccessCodePath = Join-Path $script:ConfigRoot 'access-code.json'
+$script:AppsConfigPath = Join-Path $script:ConfigRoot 'apps.json'
 $script:Cancelled = $false
 
 function Initialize-Storage {
@@ -108,7 +110,7 @@ function Invoke-ActivationGate {
         $secureCode=Read-Host '  ENTER ACCESS CODE' -AsSecureString; $bstr=[System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureCode)
         try { $code=[System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr) } finally { [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
         Show-ScanBar 'validating credentials' 24 Yellow
-        if ($code -ceq $AccessCode) { Write-Glitch 'ACCESS GRANTED' 8 Green; return $true }
+        if ($code -ceq $script:AccessCode) { Write-Glitch 'ACCESS GRANTED' 8 Green; return $true }
         Write-Glitch 'ACCESS DENIED' 8 Red
         if ($attempt -lt $maxAttempts) { Write-Host "  attempts remaining: $($maxAttempts-$attempt)" -ForegroundColor DarkRed }
     }
@@ -131,7 +133,7 @@ function Ensure-Elevation {
     if (Test-IsAdmin) { return }
     Write-Status 'Administrator permission is required for the maintenance features.' Warn
     if ((Read-Host 'Restart elevated now? (Y/N)') -notmatch '^[Yy]') { throw 'Elevation was declined.' }
-    $args = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -AccessCode `"$AccessCode`""
+    $args = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
     if ($SkipBootAnimation) { $args += ' -SkipBootAnimation' }; if ($NoRemotePrompt) { $args += ' -NoRemotePrompt' }
     Start-Process PowerShell -Verb RunAs -ArgumentList $args
     exit
@@ -233,38 +235,34 @@ function Invoke-WindowsActivation {
 
 }
 function Get-PackageManager { if (Get-Command winget -ErrorAction SilentlyContinue) { 'winget' } elseif (Get-Command choco -ErrorAction SilentlyContinue) { 'choco' } else { $null } }
-$script:AppCatalog = [ordered]@{
-    'Chrome'                         = @{ Winget='Google.Chrome';                              Choco='googlechrome' }
-    'WhatsApp Desktop'               = @{ Winget='msstore:9NKSQGP7F2NH';                       Choco='na' }
-    'Adobe Acrobat Reader'           = @{ Winget='Adobe.Acrobat.Reader.64-bit';               Choco='adobereader' }
-    'Visual C++ Redistributable x64' = @{ Winget='Microsoft.VCRedist.2015+.x64';               Choco='vcredist2015' }
-    'Visual C++ Redistributable x86' = @{ Winget='Microsoft.VCRedist.2015+.x86';               Choco='vcredist2015' }
-    '.NET Desktop Runtime 8'         = @{ Winget='Microsoft.DotNet.DesktopRuntime.8';         Choco='dotnet-8.0-runtime' }
-    'VLC'                            = @{ Winget='VideoLAN.VLC';                               Choco='vlc' }
-    '7-Zip'                          = @{ Winget='7zip.7zip';                                  Choco='7zip' }
-    'qBittorrent'                    = @{ Winget='qBittorrent.qBittorrent';                    Choco='qbittorrent' }
-    'Revo Uninstaller'               = @{ Winget='RevoUninstaller.RevoUninstaller';            Choco='revo-uninstaller' }
-    'HWiNFO'                         = @{ Winget='REALiX.HWiNFO';                              Choco='hwinfo' }
-    'Snappy Driver Installer Origin' = @{ Winget='GlennDelahoy.SnappyDriverInstallerOrigin';    Choco='sdio' }
-    'Process Lasso'                  = @{ Winget='BitSum.ProcessLasso';                        Choco='plasso' }
-    'Steam'                          = @{ Winget='Valve.Steam';                                Choco='steam-client' }
-    'Discord'                        = @{ Winget='Discord.Discord';                            Choco='discord' }
-    'OBS Studio'                     = @{ Winget='OBSProject.OBSStudio';                       Choco='obs-studio' }
-    'NVCleanstall'                   = @{ Winget='TechPowerUp.NVCleanstall';                   Choco='na' }
-    'MSI Afterburner'                = @{ Winget='Guru3D.Afterburner';                         Choco='msiafterburner' }
-    # Kept only for the optional remote-support branch required by the utility.
-    'AnyDesk'                        = @{ Winget='AnyDesk.AnyDesk';                            Choco='anydesk' }
+function Import-Configuration {
+    if (-not (Test-Path $script:AccessCodePath)) { throw "Access-code configuration was not found: $script:AccessCodePath" }
+    if (-not (Test-Path $script:AppsConfigPath)) { throw "App configuration was not found: $script:AppsConfigPath" }
+
+    $accessConfig = Get-Content -LiteralPath $script:AccessCodePath -Raw | ConvertFrom-Json
+    $script:AccessCode = [string]$accessConfig.AccessCode
+    if ([string]::IsNullOrWhiteSpace($script:AccessCode)) { throw 'The access code in config\\access-code.json is blank or missing.' }
+
+    $appsConfig = Get-Content -LiteralPath $script:AppsConfigPath -Raw | ConvertFrom-Json
+    if (-not $appsConfig.Apps -or -not $appsConfig.Bundles) { throw 'The app configuration must contain Apps and Bundles.' }
+
+    $script:AppCatalog = [ordered]@{}
+    foreach ($app in @($appsConfig.Apps)) {
+        if ([string]::IsNullOrWhiteSpace([string]$app.Name) -or [string]::IsNullOrWhiteSpace([string]$app.Winget)) { throw 'Each app must include a Name and Winget package ID.' }
+        $script:AppCatalog[$app.Name] = @{ Winget=[string]$app.Winget; Choco=[string]$app.Choco }
+    }
+
+    $script:AppBundles = [ordered]@{}
+    $previousApps = @()
+    foreach ($bundle in @($appsConfig.Bundles)) {
+        if ([string]::IsNullOrWhiteSpace([string]$bundle.Name)) { throw 'Each app bundle must include a Name.' }
+        $bundleApps = @($bundle.Apps | ForEach-Object { [string]$_ })
+        foreach ($appName in $bundleApps) { if (-not $script:AppCatalog.Contains($appName)) { throw "Bundle '$($bundle.Name)' contains unknown app '$appName'." } }
+        $script:AppBundles[$bundle.Name] = if ($bundle.Cumulative -eq $true) { @($previousApps + $bundleApps) } else { $bundleApps }
+        $previousApps = $script:AppBundles[$bundle.Name]
+    }
+    Write-Log 'Configuration loaded.' INFO
 }
-$script:AppBundles = [ordered]@{
-    'Level 1 : Office'      = @('Chrome','WhatsApp Desktop','Adobe Acrobat Reader','Visual C++ Redistributable x64','Visual C++ Redistributable x86','.NET Desktop Runtime 8','VLC','7-Zip','qBittorrent')
-    'Level 2 : Laptop'      = @('Revo Uninstaller')
-    'Level 3 : Performance' = @('HWiNFO','Snappy Driver Installer Origin','Process Lasso')
-    'Level 4 : Gaming'      = @('Steam','Discord','OBS Studio','NVCleanstall','MSI Afterburner')
-}
-# App levels are cumulative, matching Package Optimizations.
-$script:AppBundles['Level 2 : Laptop'] = @($script:AppBundles['Level 1 : Office'] + $script:AppBundles['Level 2 : Laptop'])
-$script:AppBundles['Level 3 : Performance'] = @($script:AppBundles['Level 2 : Laptop'] + $script:AppBundles['Level 3 : Performance'])
-$script:AppBundles['Level 4 : Gaming'] = @($script:AppBundles['Level 3 : Performance'] + $script:AppBundles['Level 4 : Gaming'])
 function Install-AppItem {
     param([Parameter(Mandatory)][string]$Name, [switch]$SkipConfirmation)
     if (-not $script:AppCatalog.Contains($Name)) { Write-Status "Unknown app: $Name" Bad; return }
