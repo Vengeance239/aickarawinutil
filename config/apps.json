@@ -1,0 +1,45 @@
+{
+  "Apps": [
+    { "Name": "Chrome", "Winget": "Google.Chrome", "Choco": "googlechrome" },
+    { "Name": "WhatsApp Desktop", "Winget": "msstore:9NKSQGP7F2NH", "Choco": "na" },
+    { "Name": "Adobe Acrobat Reader", "Winget": "Adobe.Acrobat.Reader.64-bit", "Choco": "adobereader" },
+    { "Name": "Visual C++ Redistributable x64", "Winget": "Microsoft.VCRedist.2015+.x64", "Choco": "vcredist2015" },
+    { "Name": "Visual C++ Redistributable x86", "Winget": "Microsoft.VCRedist.2015+.x86", "Choco": "vcredist2015" },
+    { "Name": ".NET Desktop Runtime 8", "Winget": "Microsoft.DotNet.DesktopRuntime.8", "Choco": "dotnet-8.0-runtime" },
+    { "Name": "VLC", "Winget": "VideoLAN.VLC", "Choco": "vlc" },
+    { "Name": "7-Zip", "Winget": "7zip.7zip", "Choco": "7zip" },
+    { "Name": "qBittorrent", "Winget": "qBittorrent.qBittorrent", "Choco": "qbittorrent" },
+    { "Name": "Revo Uninstaller", "Winget": "RevoUninstaller.RevoUninstaller", "Choco": "revo-uninstaller" },
+    { "Name": "HWiNFO", "Winget": "REALiX.HWiNFO", "Choco": "hwinfo" },
+    { "Name": "Snappy Driver Installer Origin", "Winget": "GlennDelahoy.SnappyDriverInstallerOrigin", "Choco": "sdio" },
+    { "Name": "Process Lasso", "Winget": "BitSum.ProcessLasso", "Choco": "plasso" },
+    { "Name": "Steam", "Winget": "Valve.Steam", "Choco": "steam-client" },
+    { "Name": "Discord", "Winget": "Discord.Discord", "Choco": "discord" },
+    { "Name": "OBS Studio", "Winget": "OBSProject.OBSStudio", "Choco": "obs-studio" },
+    { "Name": "NVCleanstall", "Winget": "TechPowerUp.NVCleanstall", "Choco": "na" },
+    { "Name": "MSI Afterburner", "Winget": "Guru3D.Afterburner", "Choco": "msiafterburner" },
+    { "Name": "AnyDesk", "Winget": "AnyDesk.AnyDesk", "Choco": "anydesk" }
+  ],
+  "Bundles": [
+    {
+      "Name": "Level 1 : Office",
+      "Cumulative": false,
+      "Apps": ["Chrome", "WhatsApp Desktop", "Adobe Acrobat Reader", "Visual C++ Redistributable x64", "Visual C++ Redistributable x86", ".NET Desktop Runtime 8", "VLC", "7-Zip", "qBittorrent"]
+    },
+    {
+      "Name": "Level 2 : Laptop",
+      "Cumulative": true,
+      "Apps": ["Revo Uninstaller"]
+    },
+    {
+      "Name": "Level 3 : Performance",
+      "Cumulative": true,
+      "Apps": ["HWiNFO", "Snappy Driver Installer Origin", "Process Lasso"]
+    },
+    {
+      "Name": "Level 4 : Gaming",
+      "Cumulative": true,
+      "Apps": ["Steam", "Discord", "OBS Studio", "NVCleanstall", "MSI Afterburner"]
+    }
+  ]
+}
