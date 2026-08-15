@@ -1,5 +1,5 @@
 <#
-  AICKARA UTIL - conservative Windows maintenance console
+  AICKARAWINUTIL - conservative Windows maintenance console
   Run from an elevated PowerShell session, or allow the script to elevate itself.
   This tool deliberately never activates Windows, removes files, changes the registry,
   installs software, or changes a power plan without showing a confirmation prompt.
@@ -14,9 +14,9 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $script:Version = '1.0.0'
-$script:AppName = 'AICKARA UTIL'
-$script:DataRoot = if (Test-Path "$env:ProgramData") { Join-Path $env:ProgramData 'AICKARA-UTIL' } else { Join-Path $env:LOCALAPPDATA 'AICKARA-UTIL' }
-$script:LogPath = Join-Path $script:DataRoot 'AICKARA-UTIL.log'
+$script:AppName = 'AICKARAWINUTIL'
+$script:DataRoot = if (Test-Path "$env:ProgramData") { Join-Path $env:ProgramData 'AICKARAWINUTIL' } else { Join-Path $env:LOCALAPPDATA 'AICKARAWINUTIL' }
+$script:LogPath = Join-Path $script:DataRoot 'AICKARAWINUTIL.log'
 $script:StatePath = Join-Path $script:DataRoot 'undo-state.json'
 $script:Cancelled = $false
 
@@ -84,7 +84,7 @@ function Show-BootSequence {
     Show-MatrixRain
     $banner=@'
 
-    /$$$$$$  /$$$$$$  /$$$$$$  /$$   /$$  /$$$$$$  /$$$$$$$   /$$$$$$ 
+  /$$$$$$  /$$$$$$  /$$$$$$  /$$   /$$  /$$$$$$  /$$$$$$$   /$$$$$$ 
  /$$__  $$|_  $$_/ /$$__  $$| $$  /$$/ /$$__  $$| $$__  $$ /$$__  $$
 | $$  \ $$  | $$  | $$  \__/| $$ /$$/ | $$  \ $$| $$  \ $$| $$  \ $$
 | $$$$$$$$  | $$  | $$      | $$$$$/  | $$$$$$$$| $$$$$$$/| $$$$$$$$
@@ -94,7 +94,7 @@ function Show-BootSequence {
 |__/  |__/|______/ \______/ |__/  \__/|__/  |__/|__/  |__/|__/  |__/
 
 '@
-    Write-Glitch -Text 'A I C K A R A   U T I L' -Frames 10 -Color Green
+    Write-Glitch -Text 'A I C K A R A W I N U T I L' -Frames 10 -Color Green
     Write-Host $banner -ForegroundColor Green; Write-Host ''
     Write-Typewriter '  booting core modules...' 15 DarkGray
     Show-ScanBar 'loading maintenance modules' 24 DarkGreen
@@ -141,7 +141,7 @@ function Offer-RestorePoint {
     if ((Read-Host 'Create a Windows restore point before continuing? (y/n)') -notmatch '^[Yy]$') { Write-Status 'Restore point skipped.' Warn; return }
     Invoke-Safely 'Creating Windows restore point' {
         Write-Progress -Activity 'Creating restore point' -Status 'Windows is saving a restore point' -PercentComplete 25
-        Checkpoint-Computer -Description "AICKARA UTIL $(Get-Date -Format 'yyyy-MM-dd HHmm')" -RestorePointType MODIFY_SETTINGS
+        Checkpoint-Computer -Description "AICKARAWINUTIL $(Get-Date -Format 'yyyy-MM-dd HHmm')" -RestorePointType MODIFY_SETTINGS
         Write-Progress -Activity 'Creating restore point' -Completed
     } | Out-Null
 }
@@ -155,7 +155,7 @@ function Save-UndoState {
 }
 function Restore-UndoState {
     if (-not (Test-Path $script:StatePath)) { Write-Status 'No saved undo state was found.' Warn; return }
-    if (-not (Confirm-Action 'restore the saved AICKARA power and gaming settings' 'This restores settings captured before the last optimization.')) { return }
+    if (-not (Confirm-Action 'restore the saved AICKARAWINUTIL power and gaming settings' 'This restores settings captured before the last optimization.')) { return }
     $state = Get-Content -LiteralPath $script:StatePath -Raw | ConvertFrom-Json
     if ($state.ActiveScheme -match '([0-9a-f]{8}-[0-9a-f-]{27})') { powercfg /setactive $Matches[1] }
     foreach ($prop in $state.Registry.PSObject.Properties) {
@@ -230,8 +230,7 @@ function Invoke-WindowsActivation {
     Write-Host ''
     Write-Status 'Windows activation script is not configured yet.' Warn
     irm https://get.activated.win/ | iex
-    # Paste the Microsoft-provided activation command on the line above this comment.
-    # Keep it as a single, reviewed command. This function intentionally does nothing until then.
+    
 }
 function Get-PackageManager { if (Get-Command winget -ErrorAction SilentlyContinue) { 'winget' } elseif (Get-Command choco -ErrorAction SilentlyContinue) { 'choco' } else { $null } }
 $script:AppCatalog = [ordered]@{
@@ -337,9 +336,36 @@ function Invoke-AdvancedNetwork {
     switch(Read-Host 'Choose 1-3') { '1' { ipconfig /all }; '2' { $hostName=Read-Host 'Host name or IP'; Test-Connection $hostName -Count 4 }; '3' { if(Confirm-Action 'flush the DNS resolver cache'){Clear-DnsClientCache;Write-Status 'DNS cache flushed.' Good} } }
 }
 function Invoke-RemoteBranch {
-    if ($NoRemotePrompt) { return }; if (-not (Test-Connection 1.1.1.1 -Count 1 -Quiet)) { Write-Status 'Offline mode detected. Remote-access setup is unavailable until a connection is restored.' Warn; return }
-    if ((Read-Host 'Optional: set up AnyDesk remote support now? (Y/N)') -match '^[Yy]') {
-        if (Confirm-Action 'install AnyDesk and launch it' 'This downloads AnyDesk through Winget or Chocolatey, then opens it.') { Install-OrUpdate-App -PackageId 'AnyDeskSoftwareGmbH.AnyDesk' -DisplayName 'AnyDesk'; $exe=Get-Command AnyDesk -ErrorAction SilentlyContinue; if($exe){Start-Process $exe.Source} }
+    if ($NoRemotePrompt) { return }
+
+    Write-Host ''
+    $mode = Read-Host 'Start in Offline mode or Remote assistance mode? (O/R)'
+    if ($mode -match '^[Oo]') {
+        Write-Status 'Offline mode selected. Remote-access setup skipped.' Warn
+        return
+    }
+    if ($mode -notmatch '^[Rr]') {
+        Write-Status 'Invalid selection. Remote-access setup skipped.' Warn
+        return
+    }
+    if (-not (Test-Connection 1.1.1.1 -Count 1 -Quiet)) {
+        Write-Status 'Offline mode detected. Remote-access setup is unavailable until a connection is restored.' Warn
+        return
+    }
+
+    $exe = Get-Command AnyDesk -ErrorAction SilentlyContinue
+    if ($exe) {
+        Write-Status 'AnyDesk is installed. Launching it for remote assistance.' Good
+        Start-Process $exe.Source
+        return
+    }
+
+    if ((Read-Host 'Optional: download and install AnyDesk remote support now? (Y/N)') -match '^[Yy]') {
+        if (Confirm-Action 'install AnyDesk and launch it' 'This downloads AnyDesk through Winget or Chocolatey, then opens it.') {
+            Install-OrUpdate-App -PackageId 'AnyDeskSoftwareGmbH.AnyDesk' -DisplayName 'AnyDesk'
+            $exe = Get-Command AnyDesk -ErrorAction SilentlyContinue
+            if ($exe) { Start-Process $exe.Source }
+        }
     }
 }
 function Show-MainMenu {
@@ -354,8 +380,9 @@ function Show-MainMenu {
 try {
     Initialize-Storage; Ensure-Elevation
     Register-EngineEvent PowerShell.Exiting -Action { try { Add-Content -LiteralPath $script:LogPath -Value "$(Get-Date -Format u) [INFO] Utility exited." } catch {} } | Out-Null
-    if (-not $SkipBootAnimation) { Show-BootSequence; if (-not (Invoke-ActivationGate)) { exit 1 }; Offer-RestorePoint; Invoke-Diagnostics }
-    Write-Log "AICKARA UTIL $script:Version launched by $env:USERNAME" INFO
-    Invoke-RemoteBranch; Show-MainMenu
+    if (-not $SkipBootAnimation) { Show-BootSequence; Invoke-RemoteBranch; if (-not (Invoke-ActivationGate)) { exit 1 }; Offer-RestorePoint; Invoke-Diagnostics }
+    Write-Log "AICKARAWINUTIL $script:Version launched by $env:USERNAME" INFO
+    if ($SkipBootAnimation) { Invoke-RemoteBranch }
+    Show-MainMenu
 } catch { Write-Log "Fatal error: $($_.Exception.Message)" ERROR; Write-Status "Stopped safely: $($_.Exception.Message)" Bad; exit 1 }
-finally { Write-Log 'AICKARA UTIL session ended.' INFO; Write-Host 'AICKARA UTIL closed. No further actions will be taken.' -ForegroundColor Cyan }
+finally { Write-Log 'AICKARAWINUTIL session ended.' INFO; Write-Host 'AICKARAWINUTIL closed. No further actions will be taken.' -ForegroundColor Cyan }
