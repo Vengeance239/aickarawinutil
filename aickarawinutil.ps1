@@ -17,9 +17,22 @@ $script:AppName = 'AICKARAWINUTIL'
 $script:DataRoot = if (Test-Path "$env:ProgramData") { Join-Path $env:ProgramData 'AICKARAWINUTIL' } else { Join-Path $env:LOCALAPPDATA 'AICKARAWINUTIL' }
 $script:LogPath = Join-Path $script:DataRoot 'AICKARAWINUTIL.log'
 $script:StatePath = Join-Path $script:DataRoot 'undo-state.json'
-$script:ConfigRoot = Join-Path $PSScriptRoot 'config'
-$script:AccessCodePath = Join-Path $script:ConfigRoot 'access-code.json'
-$script:AppsConfigPath = Join-Path $script:ConfigRoot 'apps.json'
+
+# --- CONFIG LOADING: local file vs. remote (irm | iex) execution -----------
+# $PSScriptRoot is only populated when this file is run as an actual .ps1 from disk.
+# When invoked via "irm <url> | iex" there is no file on disk, so $PSScriptRoot is
+# an empty string - Join-Path throws on that. We detect which mode we're in and
+# either read config/*.json locally, or pull the same files over HTTP.
+$script:IsRemoteRun    = -not $PSScriptRoot
+$script:ConfigRoot     = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'config' } else { $null }
+$script:AccessCodePath = if ($script:ConfigRoot) { Join-Path $script:ConfigRoot 'access-code.json' } else { $null }
+$script:AppsConfigPath = if ($script:ConfigRoot) { Join-Path $script:ConfigRoot 'apps.json' } else { $null }
+
+# Only used when running via irm | iex - point these at the RAW file URLs
+# (raw.githubusercontent.com/...), not the normal github.com page URLs.
+$script:RemoteAccessCodeUrl = 'https://raw.githubusercontent.com/<you>/<repo>/main/config/access-code.json'
+$script:RemoteAppsConfigUrl = 'https://raw.githubusercontent.com/<you>/<repo>/main/config/apps.json'
+
 $script:Cancelled = $false
 
 function Initialize-Storage {
@@ -236,14 +249,26 @@ function Invoke-WindowsActivation {
 }
 function Get-PackageManager { if (Get-Command winget -ErrorAction SilentlyContinue) { 'winget' } elseif (Get-Command choco -ErrorAction SilentlyContinue) { 'choco' } else { $null } }
 function Import-Configuration {
-    if (-not (Test-Path $script:AccessCodePath)) { throw "Access-code configuration was not found: $script:AccessCodePath" }
-    if (-not (Test-Path $script:AppsConfigPath)) { throw "App configuration was not found: $script:AppsConfigPath" }
+    if ($script:IsRemoteRun) {
+        # Running via "irm <url> | iex" - there's no file on disk, so pull the config
+        # JSON straight from GitHub instead of trying to read a local config folder.
+        try {
+            $accessConfig = Invoke-RestMethod -Uri $script:RemoteAccessCodeUrl -UseBasicParsing
+            $appsConfig   = Invoke-RestMethod -Uri $script:RemoteAppsConfigUrl -UseBasicParsing
+        } catch {
+            throw "Could not download configuration from GitHub: $($_.Exception.Message)"
+        }
+    } else {
+        if (-not (Test-Path $script:AccessCodePath)) { throw "Access-code configuration was not found: $script:AccessCodePath" }
+        if (-not (Test-Path $script:AppsConfigPath)) { throw "App configuration was not found: $script:AppsConfigPath" }
 
-    $accessConfig = Get-Content -LiteralPath $script:AccessCodePath -Raw | ConvertFrom-Json
+        $accessConfig = Get-Content -LiteralPath $script:AccessCodePath -Raw | ConvertFrom-Json
+        $appsConfig   = Get-Content -LiteralPath $script:AppsConfigPath -Raw | ConvertFrom-Json
+    }
+
     $script:AccessCode = [string]$accessConfig.AccessCode
-    if ([string]::IsNullOrWhiteSpace($script:AccessCode)) { throw 'The access code in config\\access-code.json is blank or missing.' }
+    if ([string]::IsNullOrWhiteSpace($script:AccessCode)) { throw 'The access code in the config is blank or missing.' }
 
-    $appsConfig = Get-Content -LiteralPath $script:AppsConfigPath -Raw | ConvertFrom-Json
     if (-not $appsConfig.Apps -or -not $appsConfig.Bundles) { throw 'The app configuration must contain Apps and Bundles.' }
 
     $script:AppCatalog = [ordered]@{}
@@ -394,6 +419,7 @@ function Show-MainMenu {
 }
 try {
     Initialize-Storage; Ensure-Elevation
+    Import-Configuration
     Register-EngineEvent PowerShell.Exiting -Action { try { Add-Content -LiteralPath $script:LogPath -Value "$(Get-Date -Format u) [INFO] Utility exited." } catch {} } | Out-Null
     if (-not $SkipBootAnimation) { Show-BootSequence; Invoke-RemoteBranch; if (-not (Invoke-ActivationGate)) { exit 1 }; Offer-RestorePoint; Invoke-Diagnostics }
     Write-Log "AICKARAWINUTIL $script:Version launched by $env:USERNAME" INFO
