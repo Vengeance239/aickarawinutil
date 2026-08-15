@@ -81,7 +81,8 @@ data = {
   ]
 }
 
-path = "/mnt/data/aickarawinutil_app.json"
+path = "/mnt/data/aickarawinutil_app_fixed.json"
 with open(path, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2, ensure_ascii=False)
+
 print(path)
