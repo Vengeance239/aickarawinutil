@@ -30,8 +30,8 @@ $script:AppsConfigPath = if ($script:ConfigRoot) { Join-Path $script:ConfigRoot 
 
 # Only used when running via irm | iex - point these at the RAW file URLs
 # (raw.githubusercontent.com/...), not the normal github.com page URLs.
-$script:RemoteAccessCodeUrl = 'https://raw.githubusercontent.com/<you>/<repo>/main/config/access-code.json'
-$script:RemoteAppsConfigUrl = 'https://raw.githubusercontent.com/<you>/<repo>/main/config/apps.json'
+$script:RemoteAccessCodeUrl = 'https://raw.githubusercontent.com/Vengeance239/aickarawinutil/refs/heads/main/config/access-code.json'
+$script:RemoteAppsConfigUrl = 'https://raw.githubusercontent.com/Vengeance239/aickarawinutil/refs/heads/main/config/apps.json'
 
 $script:Cancelled = $false
 
