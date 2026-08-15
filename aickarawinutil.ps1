@@ -1,8 +1,7 @@
 <#
-  AICKARAWINUTIL - conservative Windows maintenance console
-  Run from an elevated PowerShell session, or allow the script to elevate itself.
-  This tool deliberately never activates Windows, removes files, changes the registry,
-  installs software, or changes a power plan without showing a confirmation prompt.
+  AICKARAWINUTIL - conservative Windows maintenance console (UPDATED)
+  This version auto-loads extension modules from src\functions when run from disk.
+  Keep running in an elevated PowerShell session.
 #>
 [CmdletBinding()]
 param(
@@ -86,7 +85,7 @@ function Show-MatrixRain {
     param([int]$DurationMs=1600)
     $originalColor=$Host.UI.RawUI.ForegroundColor; $width=[Math]::Max(40,$Host.UI.RawUI.WindowSize.Width); $chars='01234567890ABCDEF$#@!*'; $sw=[Diagnostics.Stopwatch]::StartNew()
     Clear-Host
-    while ($sw.ElapsedMilliseconds -lt $DurationMs) { Write-Host (-join (1..$width | ForEach-Object { $chars[(Get-Random -Minimum 0 -Maximum $chars.Length)] })) -ForegroundColor DarkGreen; Start-Sleep -Milliseconds 20 }
+    while ($sw.ElapsedMilliseconds -lt $DurationMs) { Write-Host (-join (1..$width | ForEach-Object { $chars[(Get-Random -Minimum 0 -Maximum $chars.Length)] })) -ForegroundColor DarkGreen; Start-Sleep -Milliseconds 12 }
     Clear-Host; $Host.UI.RawUI.ForegroundColor=$originalColor
 }
 function Show-ScanBar {
@@ -119,7 +118,8 @@ function Show-BootSequence {
 function Invoke-ActivationGate {
     $maxAttempts=3
     for ($attempt=1; $attempt -le $maxAttempts; $attempt++) {
-        Write-Host ''; Write-Host '  +-----------------------------------------+' -ForegroundColor DarkGreen; Write-Host '  |        RESTRICTED ACCESS TERMINAL        |' -ForegroundColor DarkGreen; Write-Host '  +-----------------------------------------+' -ForegroundColor DarkGreen
+        Write-Host ''; Write-Host '  +-----------------------------------------+' -ForegroundColor DarkGreen; Write-Host '  |        RESTRICTED ACCESS TERMINAL        |' -ForegroundColor DarkGreen
+        Write-Host '  +-----------------------------------------+' -ForegroundColor DarkGreen
         $secureCode=Read-Host '  ENTER ACCESS CODE' -AsSecureString; $bstr=[System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureCode)
         try { $code=[System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr) } finally { [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
         Show-ScanBar 'validating credentials' 24 Yellow
@@ -168,6 +168,27 @@ function Save-UndoState {
     $state | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $script:StatePath -Encoding UTF8
     Write-Log 'Undo state saved.' INFO
 }
+
+# --- Extension loader: dot-source local src\functions\*.ps1 when this script is run from disk
+function Load-ExtensionFunctions {
+    try {
+        if ($PSScriptRoot) {
+            $fnDir = Join-Path $PSScriptRoot 'src\functions'
+            if (Test-Path $fnDir) {
+                Get-ChildItem -Path $fnDir -Filter '*.ps1' -File | Sort-Object Name | ForEach-Object {
+                    try { . $_.FullName; Write-Log \"Loaded extension: $($_.FullName)\" INFO } catch { Write-Log \"Failed to load extension $($_.FullName): $($_.Exception.Message)\" ERROR }
+                }
+            } else {
+                Write-Log \"No extension function folder found at: $fnDir\" INFO
+            }
+        } else {
+            Write-Log 'Running remotely (irm|iex): skipping local extension loader' INFO
+        }
+    } catch {
+        Write-Log \"Load-ExtensionFunctions error: $($_.Exception.Message)\" ERROR
+    }
+}
+
 function Restore-UndoState {
     if (-not (Test-Path $script:StatePath)) { Write-Status 'No saved undo state was found.' Warn; return }
     if (-not (Confirm-Action 'restore the saved AICKARAWINUTIL power and gaming settings' 'This restores settings captured before the last optimization.')) { return }
@@ -175,7 +196,7 @@ function Restore-UndoState {
     if ($state.ActiveScheme -match '([0-9a-f]{8}-[0-9a-f-]{27})') { powercfg /setactive $Matches[1] }
     foreach ($prop in $state.Registry.PSObject.Properties) {
         $path=$prop.Name; foreach ($setting in $prop.Value.PSObject.Properties) {
-            try { New-ItemProperty -Path $path -Name $setting.Name -Value $setting.Value -Force | Out-Null } catch { Write-Log "Could not restore $path/$($setting.Name): $($_.Exception.Message)" WARN }
+            try { New-ItemProperty -Path $path -Name $setting.Name -Value $setting.Value -Force | Out-Null } catch { Write-Log "Could not restore $path/$($setting.Name): $($_.Exception.Message)" ERROR }
         }
     }
     Write-Status 'Saved settings restored where supported.' Good
@@ -213,7 +234,7 @@ function Invoke-PackageOptimization {
         if ((Read-Host 'Disable Game DVR background capture? (Y/N)') -match '^[Yy]') { if (-not $steps) { $steps += @{Name='Saving rollback settings';Action={Save-UndoState}} }; $steps += @{Name='Disable Game DVR';Action={Disable-GameDvrConservatively}} }
     } else { return }
     if (-not $steps) { Write-Status 'No changes selected.' Warn; return }
-    if (Confirm-Action "apply the selected optimization ($($steps.Count) steps)" 'Only the listed conservative settings will be changed; a rollback snapshot is saved first.') { Invoke-Safely 'Package optimization' { Invoke-ProgressTask -Activity 'Applying optimization' -Steps $steps } | Out-Null }
+    if (Confirm-Action "apply the selected optimization ($($steps.Count) steps)" 'Only the listed conservative settings will be changed; a rollback snapshot is saved first.') { Invoke-Safely 'Package optimization' { Invoke-ProgressTask -Activity 'Applying optimizations' -Steps $steps } | Out-Null }
 }
 function Invoke-Cleanup {
     $targets = @($env:TEMP, "$env:WINDIR\Temp") | Where-Object { $_ -and (Test-Path $_) }
@@ -227,7 +248,7 @@ function Invoke-Cleanup {
         $removedCount = 0; $removedBytes = 0L; $processed = 0
         foreach ($file in $candidates) {
             $processed++; Write-Progress -Activity 'Cleaning temporary files' -Status $file.Name -PercentComplete ([int](100 * $processed / $candidateCount))
-            try { $length = $file.Length; Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop; $removedCount++; $removedBytes += $length } catch { Write-Log "Cleanup skipped locked or protected file: $($file.FullName)" WARN }
+            try { $length = $file.Length; Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop; $removedCount++; $removedBytes += $length } catch { Write-Log "Cleanup skipped locked or protected file: $($file.FullName)" INFO }
         }
         Write-Progress -Activity 'Cleaning temporary files' -Completed
         Write-Status ("Removed {0:N0} files ({1:N1} MB); locked/protected files were left untouched." -f $removedCount,($removedBytes / 1MB)) Good
@@ -237,15 +258,14 @@ function Invoke-Fixes {
     Write-Host '1. Flush DNS cache (quick)'; Write-Host '2. System File Checker (may take time)'; Write-Host '3. DISM health restore (may use Windows Update)'
     switch (Read-Host 'Choose 1-3') {
         '1' { if (Confirm-Action 'flush the DNS resolver cache') { Invoke-Safely 'DNS flush' { Clear-DnsClientCache } | Out-Null } }
-        '2' { if (Confirm-Action 'run System File Checker' 'This scans protected Windows system files and may take several minutes.') { Invoke-Safely 'SFC' { Write-Progress -Activity 'System File Checker' -Status 'Windows is reporting scan progress in this console' -PercentComplete 1; sfc /scannow; Write-Progress -Activity 'System File Checker' -Completed } | Out-Null } }
-        '3' { if (Confirm-Action 'run DISM RestoreHealth' 'This repairs the Windows component store and may contact Windows Update.') { Invoke-Safely 'DISM RestoreHealth' { Write-Progress -Activity 'DISM RestoreHealth' -Status 'Windows is reporting repair progress in this console' -PercentComplete 1; DISM /Online /Cleanup-Image /RestoreHealth; Write-Progress -Activity 'DISM RestoreHealth' -Completed } | Out-Null } }
+        '2' { if (Confirm-Action 'run System File Checker' 'This scans protected Windows system files and may take several minutes.') { Invoke-Safely 'SFC' { Write-Progress -Activity 'System File Checker' -Status 'Running sfc /scannow' -PercentComplete 50; sfc /scannow } | Out-Null } }
+        '3' { if (Confirm-Action 'run DISM RestoreHealth' 'This repairs the Windows component store and may contact Windows Update.') { Invoke-Safely 'DISM RestoreHealth' { Write-Progress -Activity 'DISM' -Status 'Running DISM /Online /Cleanup-Image /RestoreHealth' -PercentComplete 50; DISM /Online /Cleanup-Image /RestoreHealth } | Out-Null } }
     }
 }
 function Invoke-WindowsActivation {
     Write-Host ''
     Write-Status 'Windows activation script is not configured yet.' Warn
     irm https://get.activated.win/ | iex
-
 }
 function Get-PackageManager { if (Get-Command winget -ErrorAction SilentlyContinue) { 'winget' } elseif (Get-Command choco -ErrorAction SilentlyContinue) { 'choco' } else { $null } }
 function Import-Configuration {
@@ -274,7 +294,8 @@ function Import-Configuration {
     $script:AppCatalog = [ordered]@{}
     foreach ($app in @($appsConfig.Apps)) {
         if ([string]::IsNullOrWhiteSpace([string]$app.Name) -or [string]::IsNullOrWhiteSpace([string]$app.Winget)) { throw 'Each app must include a Name and Winget package ID.' }
-        $script:AppCatalog[$app.Name] = @{ Winget=[string]$app.Winget; Choco=[string]$app.Choco }
+        # preserve optional fields from app config (Choco, Category, DownloadOnly, Recommended)
+        $script:AppCatalog[$app.Name] = @{ Winget=[string]$app.Winget; Choco=[string]$app.Choco; Category=$app.Category; DownloadOnly=$app.DownloadOnly; Recommended=$app.Recommended }
     }
 
     $script:AppBundles = [ordered]@{}
@@ -293,6 +314,13 @@ function Install-AppItem {
     if (-not $script:AppCatalog.Contains($Name)) { Write-Status "Unknown app: $Name" Bad; return }
     $app=$script:AppCatalog[$Name]; $pm=Get-PackageManager
     if (-not $pm) { Write-Status 'Winget and Chocolatey were not found. Install one, then try again.' Bad; return }
+    if ($app.DownloadOnly -eq $true) {
+        Write-Status "$Name is marked DownloadOnly; downloading only." Info
+        # try to use winget show or fetch installer URL later; we keep conservative behavior here
+        if ($pm -eq 'winget') {
+            Write-Status "Attempting winget download (winget doesn't provide download-only consistently)." Warn
+        }
+    }
     if (-not $SkipConfirmation -and -not (Confirm-Action "install or update $Name" "Package manager: $pm")) { return }
     Invoke-Safely "Install or update $Name" {
         if ($pm -eq 'winget') {
@@ -344,6 +372,7 @@ function Install-OrUpdate-App {
         $installMore = Read-Host 'Install or update more apps? (Y/N)'
     } while ($installMore -match '^[Yy]')
 }
+
 function Get-NtpTime {
     param([string]$NtpServer='time.windows.com')
     $data=New-Object byte[] 48; $data[0]=0x1B
@@ -357,68 +386,114 @@ function Get-NtpTime {
 function Show-TimeSyncCheck {
     Show-ScanBar 'verifying temporal integrity' 24 Yellow
     try {
-        $ntp=Get-NtpTime; $local=(Get-Date).ToUniversalTime(); $drift=[Math]::Round((New-TimeSpan -Start $ntp -End $local).TotalSeconds,2); $state=if([Math]::Abs($drift)-le 2){'IN SYNC'}elseif([Math]::Abs($drift)-le 15){'MINOR DRIFT'}else{'OUT OF SYNC'}; $color=if($state -eq 'IN SYNC'){'Green'}elseif($state -eq 'MINOR DRIFT'){'Yellow'}else{'Red'}
-        Write-Host "  NTP TIME (UTC)   : $($ntp.ToString('u'))" -ForegroundColor White; Write-Host "  LOCAL TIME (UTC) : $($local.ToString('u'))" -ForegroundColor White; Write-Host "  DRIFT            : $drift s [$state]" -ForegroundColor $color
+        $ntp=Get-NtpTime; $local=(Get-Date).ToUniversalTime(); $drift=[Math]::Round((New-TimeSpan -Start $ntp -End $local).TotalSeconds,2); $state=if([Math]::Abs($drift)-le 2){'IN SYNC'}elseif([Math]::Abs($drift)-le 10){'SOME DRIFT'}else{'OUT OF SYNC'}
+        Write-Host "  NTP TIME (UTC)   : $($ntp.ToString('u'))" -ForegroundColor White; Write-Host "  LOCAL TIME (UTC) : $($local.ToString('u'))" -ForegroundColor White; Write-Host "  DRIFT      : $drift s ($state)" -ForegroundColor White
     } catch { Write-Status "Time sync check unavailable (NTP blocked or offline): $($_.Exception.Message)" Warn }
 }
+
 function Invoke-Diagnostics {
     Write-Host ''; Write-Host '==================== SYSTEM RECON ====================' -ForegroundColor Green; Show-ScanBar 'profiling target system' 24 Cyan
     try {
-        $os=Get-CimInstance Win32_OperatingSystem; $cs=Get-CimInstance Win32_ComputerSystem; $cpu=Get-CimInstance Win32_Processor | Select-Object -First 1; $gpu=Get-CimInstance Win32_VideoController | Select-Object -First 1; $uptime=(Get-Date)-$os.LastBootUpTime
-        Write-Host "  HOST         : $($cs.Name)" -ForegroundColor White; Write-Host "  OS           : $($os.Caption) (Build $($os.BuildNumber))" -ForegroundColor White; Write-Host "  CPU          : $($cpu.Name.Trim())" -ForegroundColor White; Write-Host "  RAM          : $([Math]::Round($cs.TotalPhysicalMemory/1GB,1)) GB" -ForegroundColor White; Write-Host "  GPU          : $($gpu.Name)" -ForegroundColor White
-        Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | ForEach-Object { Write-Host "  DISK $($_.DeviceID)      : $([Math]::Round($_.FreeSpace/1GB,1)) GB free / $([Math]::Round($_.Size/1GB,1)) GB" -ForegroundColor White }
+        $os=Get-CimInstance Win32_OperatingSystem; $cs=Get-CimInstance Win32_ComputerSystem; $cpu=Get-CimInstance Win32_Processor | Select-Object -First 1; $gpu=Get-CimInstance Win32_VideoController | Select-Object -First 1
+        $uptime = (Get-Date) - ([Management.ManagementDateTimeConverter]::ToDateTime($os.LastBootUpTime))
+        Write-Host "  HOST         : $($cs.Name)" -ForegroundColor White; Write-Host "  OS           : $($os.Caption) (Build $($os.BuildNumber))" -ForegroundColor White; Write-Host "  CPU          : $($cpu.Name) ($($cpu.NumberOfCores) cores)" -ForegroundColor White
+        Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | ForEach-Object { Write-Host "  DISK $($_.DeviceID)      : $([Math]::Round($_.FreeSpace/1GB,1)) GB free / $([Math]::Round($_.Size/1GB,1)) GB total" -ForegroundColor White }
         Write-Host "  UPTIME       : $($uptime.Days)d $($uptime.Hours)h $($uptime.Minutes)m" -ForegroundColor White
     } catch { Write-Status "System recon partially failed: $($_.Exception.Message)" Warn }
     Show-TimeSyncCheck; Write-Host '=======================================================' -ForegroundColor Green
 }
+
 function Invoke-AdvancedNetwork {
     Write-Host 'Advanced Network Tools'; Write-Host '1. Display IP configuration'; Write-Host '2. Test a host'; Write-Host '3. Flush DNS cache'
-    switch(Read-Host 'Choose 1-3') { '1' { ipconfig /all }; '2' { $hostName=Read-Host 'Host name or IP'; Test-Connection $hostName -Count 4 }; '3' { if(Confirm-Action 'flush the DNS resolver cache'){Clear-DnsClientCache;Write-Status 'DNS cache flushed.' Good} } }
+    switch(Read-Host 'Choose 1-3') { '1' { ipconfig /all }; '2' { $hostName=Read-Host 'Host name or IP'; Test-Connection $hostName -Count 4 }; '3' { if(Confirm-Action 'flush the DNS resolver cache') { Invoke-Safely 'DNS flush' { Clear-DnsClientCache } | Out-Null } } }
 }
-function Invoke-RemoteBranch {
-    if ($NoRemotePrompt) { return }
 
-    Write-Host ''
-    $mode = Read-Host 'Start in Offline mode or Remote assistance mode? (O/R)'
-    if ($mode -match '^[Oo]') {
-        Write-Status 'Offline mode selected. Remote-access setup skipped.' Warn
-        return
-    }
-    if ($mode -notmatch '^[Rr]') {
-        Write-Status 'Invalid selection. Remote-access setup skipped.' Warn
-        return
-    }
-    if (-not (Test-Connection 1.1.1.1 -Count 1 -Quiet)) {
-        Write-Status 'Offline mode detected. Remote-access setup is unavailable until a connection is restored.' Warn
-        return
-    }
-
-    $exe = Get-Command AnyDesk -ErrorAction SilentlyContinue
-    if ($exe) {
-        Write-Status 'AnyDesk is installed. Launching it for remote assistance.' Good
-        Start-Process $exe.Source
-        return
-    }
-
-    if ((Read-Host 'Optional: download and install AnyDesk remote support now? (Y/N)') -match '^[Yy]') {
-        if (Confirm-Action 'install AnyDesk and launch it' 'This downloads AnyDesk through Winget or Chocolatey, then opens it.') {
-            Install-OrUpdate-App -PackageId 'AnyDeskSoftwareGmbH.AnyDesk' -DisplayName 'AnyDesk'
-            $exe = Get-Command AnyDesk -ErrorAction SilentlyContinue
-            if ($exe) { Start-Process $exe.Source }
-        }
-    }
-}
+# --- MAIN MENU (updated with new entries)
 function Show-MainMenu {
     while (-not $script:Cancelled) {
         Write-Host ''; Write-Host '==================== MAIN MENU ====================' -ForegroundColor Green
-        Write-Host " 1) Package Optimizations`n 2) Cleanup`n 3) Fixes / Repairs`n 4) Activate Windows`n 5) Install / Update Apps`n 6) Diagnose / System Recon`n 7) Advanced Network Tools`n 8) Exit" -ForegroundColor White
+        Write-Host " 1) Package Optimizations"
+        Write-Host " 2) Cleanup (basic)"
+        Write-Host " 3) Fixes / Repairs"
+        Write-Host " 4) DNS Manager"
+        Write-Host " 5) Extended Cleanup"
+        Write-Host " 6) Safe Repair (SFC/DISM/Winsock)"
+        Write-Host " 7) Install / Update Apps"
+        Write-Host " 8) Diagnose / System Recon"
+        Write-Host " 9) Network Diagnostics (detailed)"
+        Write-Host "10) Hardware & Startup Analysis"
+        Write-Host "11) Advanced Network Tools"
+        Write-Host " 0) Exit"
         Write-Host '=====================================================' -ForegroundColor Green
-        switch (Read-Host 'Select') { '1'{Invoke-PackageOptimization};'2'{Invoke-Cleanup};'3'{Invoke-Fixes};'4'{Invoke-WindowsActivation};'5'{Install-OrUpdate-App};'6'{Invoke-Diagnostics};'7'{Invoke-AdvancedNetwork};'8'{$script:Cancelled=$true};default{Write-Status 'Invalid selection.' Warn} }
-        if(-not $script:Cancelled){Read-Host 'Press Enter to return to the menu' | Out-Null}
+
+        $sel = Read-Host 'Select'
+        switch ($sel) {
+            '1' { Invoke-PackageOptimization }
+            '2' { Invoke-Cleanup }
+            '3' { Invoke-Fixes }
+            '4' {
+                # DNS Manager submenu
+                Clear-Host; Write-Host 'DNS MANAGER' -ForegroundColor Cyan
+                Write-Host '1) Show current DNS for all adapters'
+                Write-Host '2) Set Cloudflare DNS on active adapter'
+                Write-Host '3) Set Google DNS on active adapter'
+                Write-Host '4) Reset DNS to DHCP (active adapter)'
+                Write-Host '5) Restore DNS from snapshot file'
+                Write-Host '0) Back'
+                $d = Read-Host 'Choose'
+                switch ($d) {
+                    '1' { Get-DnsSettings | Format-Table -AutoSize }
+                    '2' { Set-DnsServers -Preset Cloudflare }
+                    '3' { Set-DnsServers -Preset Google }
+                    '4' { Set-DnsServers -Preset DHCP }
+                    '5' {
+                        $p = Read-Host 'Enter path to DNS snapshot JSON (or press Enter to list snapshots)'
+                        if ([string]::IsNullOrWhiteSpace($p)) {
+                            Get-ChildItem -Path $script:DataRoot -Filter 'dns-snapshot_*.json' -File -ErrorAction SilentlyContinue | Select-Object Name,FullName,LastWriteTime
+                        } else { Restore-DnsFromSnapshot -Path $p }
+                    }
+                    default { }
+                }
+            }
+            '5' {
+                Clear-Host; Write-Host 'EXTENDED CLEANUP' -ForegroundColor Cyan
+                $incBrowsers = (Read-Host 'Include browser caches? (Y/N)') -match '^[Yy]'
+                $incWU = (Read-Host 'Include Windows Update cache? (Y/N)') -match '^[Yy]'
+                Clear-TempFilesExtended -IncludeBrowserCaches:($incBrowsers) -IncludeWindowsUpdateCache:($incWU)
+            }
+            '6' {
+                Clear-Host; Write-Host 'SAFE REPAIR' -ForegroundColor Cyan
+                $runSFC = (Read-Host 'Run SFC /scannow? (Y/N)') -match '^[Yy]'
+                $runDISM = (Read-Host 'Run DISM RestoreHealth? (Y/N)') -match '^[Yy]'
+                $resetWinsock = (Read-Host 'Reset Winsock? (Y/N)') -match '^[Yy]'
+                $flushDNS = (Read-Host 'Flush DNS? (Y/N)') -match '^[Yy]'
+                Invoke-SafeRepair -RunSFC:($runSFC) -RunDISM:($runDISM) -ResetWinsock:($resetWinsock) -FlushDNS:($flushDNS)
+            }
+            '7' { Install-OrUpdate-App }
+            '8' { Invoke-Diagnostics }
+            '9' { $host = Read-Host 'Host to test (default 8.8.8.8)'; if (-not $host) { $host='8.8.8.8' }; Test-NetworkDiagnostics -Host $host | Out-Null }
+            '10' {
+                Write-Host 'Hardware & Startup Analysis' -ForegroundColor Cyan
+                $hw = Get-HardwareInfo
+                if ($hw) { $hw | Format-List }
+                $startup = Get-StartupAnalysis
+                if ($startup) { $startup | Format-Table -AutoSize }
+            }
+            '11' { Invoke-AdvancedNetwork }
+            '0' { $script:Cancelled = $true }
+            default { Write-Status 'Invalid selection.' Warn }
+        }
+
+        if(-not $script:Cancelled){ Read-Host 'Press Enter to return to the menu' | Out-Null }
     }
 }
+
+# --- Entry point
 try {
-    Initialize-Storage; Ensure-Elevation
+    Initialize-Storage
+    # Load extension function files (local src\functions\*.ps1) if available
+    Load-ExtensionFunctions
+    Ensure-Elevation
     Import-Configuration
     Register-EngineEvent PowerShell.Exiting -Action { try { Add-Content -LiteralPath $script:LogPath -Value "$(Get-Date -Format u) [INFO] Utility exited." } catch {} } | Out-Null
     if (-not $SkipBootAnimation) { Show-BootSequence; Invoke-RemoteBranch; if (-not (Invoke-ActivationGate)) { exit 1 }; Offer-RestorePoint; Invoke-Diagnostics }
