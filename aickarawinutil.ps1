@@ -230,7 +230,7 @@ function Invoke-WindowsActivation {
     Write-Host ''
     Write-Status 'Windows activation script is not configured yet.' Warn
     irm https://get.activated.win/ | iex
-    
+
 }
 function Get-PackageManager { if (Get-Command winget -ErrorAction SilentlyContinue) { 'winget' } elseif (Get-Command choco -ErrorAction SilentlyContinue) { 'choco' } else { $null } }
 $script:AppCatalog = [ordered]@{
@@ -285,7 +285,20 @@ function Install-AppBundle {
     param([Parameter(Mandatory)][string]$BundleName)
     $apps=$script:AppBundles[$BundleName]
     if (-not (Confirm-Action "install or update the $BundleName app package" ($apps -join ', '))) { return }
-    $i=0; foreach($app in $apps) { $i++; Write-Progress -Activity "App package: $BundleName" -Status $app -PercentComplete ([int](100*$i/$apps.Count)); Install-AppItem -Name $app -SkipConfirmation }; Write-Progress -Activity "App package: $BundleName" -Completed
+    Install-AppList -Apps $apps -Activity "App package: $BundleName"
+}
+function Install-AppList {
+    param([Parameter(Mandatory)][string[]]$Apps, [Parameter(Mandatory)][string]$Activity)
+    $total=$Apps.Count
+    for($i=0; $i -lt $total; $i++) {
+        $app=$Apps[$i]
+        $percent=[int](100*$i/$total)
+        Write-Progress -Activity $Activity -Status "Installing $app ($($i+1) of $total)" -PercentComplete $percent
+        Write-Status "[$($i+1)/$total] Installing or updating $app..." Info
+        Install-AppItem -Name $app -SkipConfirmation
+        Write-Progress -Activity $Activity -Status "Completed $app ($($i+1) of $total)" -PercentComplete ([int](100*($i+1)/$total))
+    }
+    Write-Progress -Activity $Activity -Completed
 }
 function Install-OrUpdate-App {
     param([string]$PackageId, [string]$DisplayName)
@@ -300,9 +313,13 @@ function Install-OrUpdate-App {
     $parsed=0; $isNumber=[int]::TryParse($pick,[ref]$parsed)
     if ($isNumber -and $parsed -ge 1 -and $parsed -lt $index) { Install-AppBundle -BundleName @($script:AppBundles.Keys)[$parsed-1]; return }
     if (-not $isNumber -or $parsed -ne $index) { Write-Status 'Invalid selection.' Warn; return }
-    $n=1; $lookup=@{}; foreach($name in ($script:AppCatalog.Keys | Where-Object { $_ -ne 'AnyDesk' })) { $lookup[$n]=$name; Write-Host "$n. $name"; $n++ }
-    $selected=(Read-Host 'Enter app numbers separated by commas') -split ',' | ForEach-Object { $v=0; if([int]::TryParse($_.Trim(),[ref]$v) -and $lookup.ContainsKey($v)){$lookup[$v]} } | Select-Object -Unique
-    if(-not $selected){Write-Status 'No apps selected.' Warn;return}; if(Confirm-Action 'install or update selected apps' ($selected -join ', ')){foreach($name in $selected){Install-AppItem -Name $name -SkipConfirmation}}
+    do {
+        Clear-Host; Write-Host 'CUSTOM APP INSTALL / UPDATE' -ForegroundColor Cyan; $n=1; $lookup=@{}
+        foreach($name in ($script:AppCatalog.Keys | Where-Object { $_ -ne 'AnyDesk' })) { $lookup[$n]=$name; Write-Host "$n. $name"; $n++ }
+        $selected=(Read-Host 'Enter app numbers separated by commas') -split ',' | ForEach-Object { $v=0; if([int]::TryParse($_.Trim(),[ref]$v) -and $lookup.ContainsKey($v)){$lookup[$v]} } | Select-Object -Unique
+        if(-not $selected) { Write-Status 'No apps selected.' Warn } elseif(Confirm-Action 'install or update selected apps' ($selected -join ', ')) { Install-AppList -Apps $selected -Activity 'Selected apps' }
+        $installMore = Read-Host 'Install or update more apps? (Y/N)'
+    } while ($installMore -match '^[Yy]')
 }
 function Get-NtpTime {
     param([string]$NtpServer='time.windows.com')
