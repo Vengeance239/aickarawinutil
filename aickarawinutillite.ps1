@@ -19,7 +19,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $script:Version = '0.0.9-Lite'
-$script:AppName = 'AICKARA UTIL LITE'
+$script:AppName = 'AICKARA WIN UTIL LITE'
 $script:Cancelled = $false
 $script:DataRoot = if ($env:ProgramData -and (Test-Path $env:ProgramData)) {
     Join-Path $env:ProgramData 'AICKARAWINUTIL'
