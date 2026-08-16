@@ -15,7 +15,11 @@ Open **PowerShell** or **Windows Terminal** as Administrator and run:
 ```powershell
 irm "https://raw.githubusercontent.com/Vengeance239/aickarawinutil/main/aickarawinutil.ps1" | iex
 ```
+or **Lite version**
 
+```powershell
+irm "(https://raw.githubusercontent.com/Vengeance239/aickarawinutil/main/aickarautilslight.ps1)" | iex
+```
 ---
 
 ## Features
