@@ -540,11 +540,24 @@ try {
     if ($SkipBootAnimation) { Invoke-RemoteBranch }
     Show-MainMenu
 } catch {
-    Write-Log "Fatal error: $($_.Exception | Out-String)" ERROR
+    $err = $_
+
     Write-Host ''
     Write-Host '========== ERROR DETAILS ==========' -ForegroundColor Red
-    Write-Host ($_.Exception | Format-List * -Force | Out-String) -ForegroundColor Yellow
+    Write-Host "Message      : $($err.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "Line         : $($err.InvocationInfo.ScriptLineNumber)" -ForegroundColor Yellow
+    Write-Host "Column       : $($err.InvocationInfo.OffsetInLine)" -ForegroundColor Yellow
+    Write-Host "Command      : $($err.InvocationInfo.MyCommand.Name)" -ForegroundColor Yellow
+    Write-Host "Script       : $($err.InvocationInfo.ScriptName)" -ForegroundColor Yellow
+    Write-Host ''
+    Write-Host 'CODE LINE:' -ForegroundColor Cyan
+    Write-Host $err.InvocationInfo.Line -ForegroundColor White
+    Write-Host ''
+    Write-Host 'POSITION:' -ForegroundColor Cyan
+    Write-Host $err.InvocationInfo.PositionMessage -ForegroundColor White
     Write-Host '===================================' -ForegroundColor Red
-    Write-Status "Stopped safely: $($_.Exception.Message)" Bad
+
+    Write-Log "Fatal error: $($err.Exception.Message)" ERROR
+    Write-Status "Stopped safely: $($err.Exception.Message)" Bad
     exit 1
 }
