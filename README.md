@@ -18,7 +18,7 @@ irm "https://raw.githubusercontent.com/Vengeance239/aickarawinutil/main/aickaraw
 or **Lite version**
 
 ```powershell
-irm "https://raw.githubusercontent.com/Vengeance239/aickarawinutil/main/aickarautilslight.ps1" | iex
+irm "https://raw.githubusercontent.com/Vengeance239/aickarawinutil/main/aickarawinutillite.ps1" | iex
 ```
 ---
 
