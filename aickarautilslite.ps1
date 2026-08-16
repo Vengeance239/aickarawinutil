@@ -18,8 +18,8 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$script:Version = '1.0.0-Lite'
-$script:AppName = 'AICKARA UTIL LIGHT'
+$script:Version = '0.0.9-Lite'
+$script:AppName = 'AICKARA UTIL LITE'
 $script:Cancelled = $false
 $script:DataRoot = if ($env:ProgramData -and (Test-Path $env:ProgramData)) {
     Join-Path $env:ProgramData 'AICKARAWINUTIL'
@@ -187,8 +187,9 @@ function Invoke-Safely {
 function Show-Title {
     Clear-Host
     Write-Host ''
-    Write-Host '  A I C K A R A   U T I L' -ForegroundColor Green
+    Write-Host '  A I C K A R A  W I N  U T I L' -ForegroundColor Green
     Write-Host ''
+
     $banner=@'
   /$$$$$$  /$$$$$$  /$$$$$$  /$$   /$$  /$$$$$$  /$$$$$$$   /$$$$$$
  /$$__  $$|_  $$_/ /$$__  $$| $$  /$$/ /$$__  $$| $$__  $$ /$$__  $$
@@ -199,6 +200,7 @@ function Show-Title {
 | $$  | $$ /$$$$$$|  $$$$$$/| $$ \  $$| $$  | $$| $$  | $$| $$  | $$
 |__/  |__/|______/ \______/ |__/  \__/|__/  |__/|__/  |__/|__/  |__/
 '@
+
     Write-Host $banner -ForegroundColor Green
     Write-Host ''
     Write-Host "  AICKARA UTIL LIGHT v$script:Version" -ForegroundColor DarkGray
@@ -273,44 +275,52 @@ function Invoke-PackageOptimization {
         Write-Host '5. Custom optimization'
         Write-Host '0. Back to main menu'
         Write-Host ''
-        $choice=Read-Host 'Choose'
 
+        $choice = Read-Host 'Choose'
         if ($choice -eq '0') { return }
 
-        $level=if($choice -in '1','2','3','4'){[int]$choice}else{0}
-        $steps=@()
+        $steps = @()
 
-        if($level -gt 0){
-            $steps += @{Name='Office baseline: Balanced power plan';Action={Set-PowerScheme Balanced}}
-            if($level -ge 2){$steps += @{Name='Laptop baseline: enabling hibernation';Action={powercfg /hibernate on}}
+        if ($choice -in @('1','2','3','4')) {
+            $level = [int]$choice
+            $steps += @{ Name='Office baseline: Balanced power plan'; Action={ Set-PowerScheme Balanced } }
+
+            if ($level -ge 2) {
+                $steps += @{ Name='Laptop baseline: enabling hibernation'; Action={ powercfg /hibernate on } }
             }
-            if($level -ge 3){$steps += @{Name='Performance plan: High performance';Action={Set-PowerScheme HighPerformance}}
-            if($level -ge 4){$steps += @{Name='Gaming: disabling background Game DVR capture';Action={Disable-GameDvrConservatively}}
+
+            if ($level -ge 3) {
+                $steps += @{ Name='Performance plan: High performance'; Action={ Set-PowerScheme HighPerformance } }
+            }
+
+            if ($level -ge 4) {
+                $steps += @{ Name='Gaming: disabling background Game DVR capture'; Action={ Disable-GameDvrConservatively } }
+            }
         }
-        elseif($choice -eq '5'){
-            if((Read-Host 'Use High performance power plan? (Y/N)') -match '^[Yy]'){
-                $steps += @{Name='High performance power plan';Action={Set-PowerScheme HighPerformance}}
+        elseif ($choice -eq '5') {
+            if ((Read-Host 'Use High performance power plan? (Y/N)') -match '^[Yy]$') {
+                $steps += @{ Name='High performance power plan'; Action={ Set-PowerScheme HighPerformance } }
             }
-            if((Read-Host 'Enable hibernation? (Y/N)') -match '^[Yy]'){
-                $steps += @{Name='Enable hibernation';Action={powercfg /hibernate on}}
+
+            if ((Read-Host 'Enable hibernation? (Y/N)') -match '^[Yy]$') {
+                $steps += @{ Name='Enable hibernation'; Action={ powercfg /hibernate on } }
             }
-            if((Read-Host 'Disable Game DVR background capture? (Y/N)') -match '^[Yy]'){
-                $steps += @{Name='Disable Game DVR';Action={Disable-GameDvrConservatively}}
+
+            if ((Read-Host 'Disable Game DVR background capture? (Y/N)') -match '^[Yy]$') {
+                $steps += @{ Name='Disable Game DVR'; Action={ Disable-GameDvrConservatively } }
             }
         }
         else {
             Write-Status 'Invalid selection.' Warn
-            Read-Host 'Press Enter to continue' | Out-Null
             continue
         }
 
-        if(-not $steps){
+        if (-not $steps) {
             Write-Status 'No changes selected.' Warn
-            Read-Host 'Press Enter to continue' | Out-Null
             continue
         }
 
-        if(Confirm-Action "apply the selected optimization ($($steps.Count) steps)"){
+        if (Confirm-Action "apply the selected optimization ($($steps.Count) steps)") {
             Invoke-Safely 'Package optimization' {
                 Invoke-ProgressTask -Activity 'Applying optimization' -Steps $steps
             } | Out-Null
@@ -943,31 +953,47 @@ function Set-DnsServers {
 }
 
 function Test-NetworkDiagnostics {
-    param([string]$Host='8.8.8.8')
+    param([string]$TargetHost='8.8.8.8')
 
-    $outDir=Join-Path $script:DataRoot 'Diagnostics'
+    $outDir = Join-Path $script:DataRoot 'Diagnostics'
     New-Item -ItemType Directory -Path $outDir -Force | Out-Null
-    $report=Join-Path $outDir ('network-report_{0:yyyyMMdd_HHmmss}.txt' -f (Get-Date))
-    $sb=New-Object System.Text.StringBuilder
+    $report = Join-Path $outDir ('network-report_{0:yyyyMMdd_HHmmss}.txt' -f (Get-Date))
+    $sb = New-Object System.Text.StringBuilder
 
-    [void]$sb.AppendLine("Network diagnostics report: $Host")
+    [void]$sb.AppendLine("Network diagnostics report: $TargetHost")
     [void]$sb.AppendLine("Generated: $(Get-Date -Format 'u')")
+
     [void]$sb.AppendLine('--- Ping ---')
-    try{[void]$sb.AppendLine((Test-Connection -ComputerName $Host -Count 4 -ErrorAction Stop | Out-String)}
-    catch{[void]$sb.AppendLine("Ping failed: $($_.Exception.Message)")}
+    try {
+        $pingOutput = Test-Connection -ComputerName $TargetHost -Count 4 -ErrorAction Stop | Out-String
+        [void]$sb.AppendLine($pingOutput)
+    }
+    catch {
+        [void]$sb.AppendLine("Ping failed: $($_.Exception.Message)")
+    }
 
     [void]$sb.AppendLine('--- Traceroute ---')
-    try{[void]$sb.AppendLine((tracert -d $Host | Out-String))}
-    catch{[void]$sb.AppendLine('Traceroute failed')}
+    try {
+        $traceOutput = tracert -d $TargetHost | Out-String
+        [void]$sb.AppendLine($traceOutput)
+    }
+    catch {
+        [void]$sb.AppendLine('Traceroute failed')
+    }
 
     [void]$sb.AppendLine('--- DNS resolution ---')
-    try{[void]$sb.AppendLine((Resolve-DnsName -Name $Host -ErrorAction Stop | Out-String))}
-    catch{[void]$sb.AppendLine('DNS lookup failed or Resolve-DnsName unavailable')}
+    try {
+        $dnsOutput = Resolve-DnsName -Name $TargetHost -ErrorAction Stop | Out-String
+        [void]$sb.AppendLine($dnsOutput)
+    }
+    catch {
+        [void]$sb.AppendLine('DNS lookup failed or Resolve-DnsName unavailable')
+    }
 
     [void]$sb.AppendLine('--- Port checks ---')
-    foreach($port in @(53,80,443,3389)){
-        $res=Test-NetConnection -ComputerName $Host -Port $port -WarningAction SilentlyContinue
-        [void]$sb.AppendLine("Port $port: TcpTestSucceeded=$($res.TcpTestSucceeded) | RemoteAddress=$($res.RemoteAddress)")
+    foreach ($port in @(53,80,443,3389)) {
+        $res = Test-NetConnection -ComputerName $TargetHost -Port $port -WarningAction SilentlyContinue
+        [void]$sb.AppendLine("Port ${port}: TcpTestSucceeded=$($res.TcpTestSucceeded) | RemoteAddress=$($res.RemoteAddress)")
     }
 
     $sb.ToString() | Set-Content -LiteralPath $report -Encoding UTF8
@@ -1027,7 +1053,7 @@ function Invoke-AdvancedNetwork {
             '6' {
                 $target=Read-Host 'Host/IP (Enter for 8.8.8.8)'
                 if(-not $target){$target='8.8.8.8'}
-                Test-NetworkDiagnostics -Host $target | Out-Null
+                Test-NetworkDiagnostics -TargetHost $target | Out-Null
             }
             '0' {return}
             default {Write-Status 'Invalid selection.' Warn}
@@ -1040,8 +1066,14 @@ function Invoke-AdvancedNetwork {
 # ---------------------------------------------------------------------------
 
 function Show-MainMenu {
+    $firstMenuDisplay = $true
+
     while(-not $script:Cancelled){
-        Clear-Host
+        if(-not $firstMenuDisplay){
+            Clear-Host
+        }
+        $firstMenuDisplay = $false
+
         Write-Host '==================== MAIN MENU ====================' -ForegroundColor Green
         Write-Host ' 1) Package Optimizations'
         Write-Host ' 2) Cleanup'
