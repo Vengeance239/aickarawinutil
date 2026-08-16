@@ -203,7 +203,7 @@ function Show-Title {
 
     Write-Host $banner -ForegroundColor Green
     Write-Host ''
-    Write-Host "  AICKARA UTIL LIGHT v$script:Version" -ForegroundColor DarkGray
+    Write-Host "  AICKARA WIN UTIL LIGHT v$script:Version" -ForegroundColor DarkGray
     Write-Host ''
 }
 
