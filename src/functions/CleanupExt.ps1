@@ -60,8 +60,16 @@ function Clear-TempFilesExtended {
 
 function Recycle-Bin-Empty {
     [CmdletBinding(SupportsShouldProcess=$true)]
-    param([switch]$WhatIf)
-    if ($PSCmdlet.ShouldProcess('Recycle Bin','Empty')) {
-        try { Clear-RecycleBin -Force -ErrorAction Stop; Write-Status 'Recycle Bin emptied.' Good } catch { Write-Log "Empty recycle bin failed: $($_.Exception.Message)" ERROR; Write-Status 'Could not empty Recycle Bin.' Bad }
+    param()
+
+    if ($PSCmdlet.ShouldProcess('Recycle Bin', 'Empty')) {
+        try {
+            Clear-RecycleBin -Force -ErrorAction Stop
+            Write-Status 'Recycle Bin emptied.' Good
+        }
+        catch {
+            Write-Log "Empty recycle bin failed: $($_.Exception.Message)" ERROR
+            Write-Status 'Could not empty Recycle Bin.' Bad
+        }
     }
 }
