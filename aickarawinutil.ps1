@@ -539,5 +539,12 @@ try {
     Write-Log "AICKARAWINUTIL $script:Version launched by $env:USERNAME" INFO
     if ($SkipBootAnimation) { Invoke-RemoteBranch }
     Show-MainMenu
-} catch { Write-Log "Fatal error: $($_.Exception.Message)" ERROR; Write-Status "Stopped safely: $($_.Exception.Message)" Bad; exit 1 }
-finally { Write-Log 'AICKARAWINUTIL session ended.' INFO; Write-Host 'AICKARAWINUTIL closed. No further actions will be taken.' -ForegroundColor Cyan }
+} catch {
+    Write-Log "Fatal error: $($_.Exception | Out-String)" ERROR
+    Write-Host ''
+    Write-Host '========== ERROR DETAILS ==========' -ForegroundColor Red
+    Write-Host ($_.Exception | Format-List * -Force | Out-String) -ForegroundColor Yellow
+    Write-Host '===================================' -ForegroundColor Red
+    Write-Status "Stopped safely: $($_.Exception.Message)" Bad
+    exit 1
+}
