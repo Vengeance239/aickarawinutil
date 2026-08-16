@@ -3,207 +3,248 @@
     {
       "Name": "Chrome",
       "Winget": "Google.Chrome",
-      "Choco": "googlechrome"
+      "Choco": "googlechrome",
+      "Category": "Essential"
     },
     {
       "Name": "WhatsApp Desktop",
       "Winget": "msstore:9NKSQGP7F2NH",
-      "Choco": "na"
+      "Choco": "na",
+      "Category": "Essential"
     },
     {
       "Name": "Adobe Acrobat Reader",
       "Winget": "Adobe.Acrobat.Reader.64-bit",
-      "Choco": "adobereader"
+      "Choco": "adobereader",
+      "Category": "Essential"
     },
     {
       "Name": "Visual C++ Redistributable x64",
       "Winget": "Microsoft.VCRedist.2015+.x64",
-      "Choco": "vcredist2015"
+      "Choco": "vcredist2015",
+      "Category": "Essential"
     },
     {
       "Name": "Visual C++ Redistributable x86",
       "Winget": "Microsoft.VCRedist.2015+.x86",
-      "Choco": "vcredist2015"
+      "Choco": "vcredist2015",
+      "Category": "Essential"
     },
     {
       "Name": ".NET Desktop Runtime 8",
       "Winget": "Microsoft.DotNet.DesktopRuntime.8",
-      "Choco": "dotnet-8.0-runtime"
+      "Choco": "dotnet-8.0-runtime",
+      "Category": "Essential"
     },
     {
       "Name": "7-Zip",
       "Winget": "7zip.7zip",
-      "Choco": "7zip"
+      "Choco": "7zip",
+      "Category": "Essential"
     },
     {
       "Name": "VLC",
       "Winget": "VideoLAN.VLC",
-      "Choco": "vlc"
+      "Choco": "vlc",
+      "Category": "Essential"
     },
     {
       "Name": "Revo Uninstaller",
       "Winget": "RevoUninstaller.RevoUninstaller",
-      "Choco": "revo-uninstaller"
+      "Choco": "revo-uninstaller",
+      "Category": "Cleanup & Storage"
     },
     {
       "Name": "Everything",
       "Winget": "voidtools.Everything",
-      "Choco": "everything"
+      "Choco": "everything",
+      "Category": "Cleanup & Storage"
     },
     {
       "Name": "Microsoft PC Manager",
       "Winget": "Microsoft.PCManager",
-      "Choco": "na"
+      "Choco": "na",
+      "Category": "Cleanup & Storage"
     },
     {
       "Name": "BleachBit",
       "Winget": "BleachBit.BleachBit",
-      "Choco": "bleachbit"
+      "Choco": "bleachbit",
+      "Category": "Cleanup & Storage"
     },
     {
       "Name": "DiskSavvy",
       "Winget": "Flexense.DiskSavvy",
-      "Choco": "disksavvy"
+      "Choco": "disksavvy",
+      "Category": "Cleanup & Storage"
     },
     {
       "Name": "Defraggler",
       "Winget": "Piriform.Defraggler",
-      "Choco": "defraggler"
+      "Choco": "defraggler",
+      "Category": "Cleanup & Storage"
     },
     {
       "Name": "Microsoft Teams",
       "Winget": "Microsoft.Teams",
-      "Choco": "microsoft-teams"
+      "Choco": "microsoft-teams",
+      "Category": "Communication"
     },
     {
       "Name": "HWiNFO",
       "Winget": "REALiX.HWiNFO",
-      "Choco": "hwinfo"
+      "Choco": "hwinfo",
+      "Category": "Hardware & Diagnostics"
     },
     {
       "Name": "CPU-Z",
       "Winget": "CPUID.CPU-Z",
-      "Choco": "cpu-z"
+      "Choco": "cpu-z",
+      "Category": "Hardware & Diagnostics"
     },
     {
       "Name": "GPU-Z",
       "Winget": "TechPowerUp.GPU-Z",
-      "Choco": "gpu-z"
+      "Choco": "gpu-z",
+      "Category": "Hardware & Diagnostics"
     },
     {
       "Name": "CrystalDiskInfo",
       "Winget": "CrystalDewWorld.CrystalDiskInfo",
-      "Choco": "crystaldiskinfo"
+      "Choco": "crystaldiskinfo",
+      "Category": "Hardware & Diagnostics"
     },
     {
       "Name": "CrystalDiskMark",
       "Winget": "CrystalDewWorld.CrystalDiskMark",
-      "Choco": "crystaldiskmark"
+      "Choco": "crystaldiskmark",
+      "Category": "Hardware & Diagnostics"
     },
     {
       "Name": "Snappy Driver Installer Origin",
       "Winget": "GlennDelahoy.SnappyDriverInstallerOrigin",
-      "Choco": "sdio"
+      "Choco": "sdio",
+      "Category": "Windows & Drivers"
     },
     {
       "Name": "Autoruns",
       "Winget": "Microsoft.Sysinternals.Autoruns",
-      "Choco": "autoruns"
+      "Choco": "autoruns",
+      "Category": "Windows & Drivers"
     },
     {
       "Name": "Process Explorer",
       "Winget": "Microsoft.Sysinternals.ProcessExplorer",
-      "Choco": "procexp"
+      "Choco": "procexp",
+      "Category": "Windows & Drivers"
     },
     {
       "Name": "DDU",
       "Winget": "Wagnardsoft.DisplayDriverUninstaller",
-      "Choco": "display-driver-uninstaller"
+      "Choco": "display-driver-uninstaller",
+      "Category": "Windows & Drivers"
     },
     {
       "Name": "NVCleanstall",
       "Winget": "TechPowerUp.NVCleanstall",
-      "Choco": "na"
+      "Choco": "na",
+      "Category": "Windows & Drivers"
     },
     {
       "Name": "TCPView",
       "Winget": "Microsoft.Sysinternals.TCPView",
-      "Choco": "tcpview"
+      "Choco": "tcpview",
+      "Category": "Network"
     },
     {
       "Name": "Advanced IP Scanner",
       "Winget": "Famatech.AdvancedIPScanner",
-      "Choco": "advanced-ip-scanner"
+      "Choco": "advanced-ip-scanner",
+      "Category": "Network"
     },
     {
       "Name": "Nmap",
       "Winget": "Insecure.Nmap",
-      "Choco": "nmap"
+      "Choco": "nmap",
+      "Category": "Network"
     },
     {
       "Name": "HandBrake",
       "Winget": "HandBrake.HandBrake",
-      "Choco": "handbrake"
+      "Choco": "handbrake",
+      "Category": "Media & Downloads"
     },
     {
       "Name": "OBS Studio",
       "Winget": "OBSProject.OBSStudio",
-      "Choco": "obs-studio"
+      "Choco": "obs-studio",
+      "Category": "Media & Downloads"
     },
     {
       "Name": "ShareX",
       "Winget": "ShareX.ShareX",
-      "Choco": "sharex"
+      "Choco": "sharex",
+      "Category": "Media & Downloads"
     },
     {
       "Name": "Spotify",
       "Winget": "Spotify.Spotify",
-      "Choco": "spotify"
+      "Choco": "spotify",
+      "Category": "Media & Downloads"
     },
     {
       "Name": "JDownloader",
       "Winget": "JDownloader.JDownloader",
-      "Choco": "jdownloader"
+      "Choco": "jdownloader",
+      "Category": "Media & Downloads"
     },
     {
       "Name": "Steam",
       "Winget": "Valve.Steam",
-      "Choco": "steam-client"
+      "Choco": "steam-client",
+      "Category": "Gaming"
     },
     {
       "Name": "Discord",
       "Winget": "Discord.Discord",
-      "Choco": "discord"
+      "Choco": "discord",
+      "Category": "Gaming"
     },
     {
       "Name": "MSI Afterburner",
       "Winget": "Guru3D.Afterburner",
-      "Choco": "msiafterburner"
+      "Choco": "msiafterburner",
+      "Category": "Gaming"
     },
     {
       "Name": "Zoom",
       "Winget": "Zoom.Zoom",
-      "Choco": "zoom"
+      "Choco": "zoom",
+      "Category": "Communication"
     },
     {
       "Name": "AnyDesk",
       "Winget": "AnyDesk.AnyDesk",
-      "Choco": "anydesk"
+      "Choco": "anydesk",
+      "Category": "Remote Support"
     },
     {
       "Name": "System Informer",
       "Winget": "WinsiderSS.SystemInformer",
-      "Choco": "systeminformer"
+      "Choco": "systeminformer",
+      "Category": "Advanced / Technician"
     },
     {
       "Name": "Wireshark",
       "Winget": "WiresharkFoundation.Wireshark",
-      "Choco": "wireshark"
+      "Choco": "wireshark",
+      "Category": "Advanced / Technician"
     },
     {
       "Name": "Rufus",
       "Winget": "Rufus.Rufus",
-      "Choco": "rufus"
+      "Choco": "rufus",
+      "Category": "Advanced / Technician"
     }
   ],
   "Bundles": [
