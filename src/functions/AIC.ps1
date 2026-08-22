@@ -1200,7 +1200,7 @@ function Show-AdobeBlockStatus {
     }
 }
 
-function Show-AdobeInternetControl {
+function Invoke-AccessControl  {
     do {
         Clear-Host
         Write-Host "========================================" -ForegroundColor Cyan
@@ -1241,11 +1241,3 @@ function Show-AdobeInternetControl {
     } while ($true)
 }
 
-# ============================================================
-# Add the following entry to your existing Utilities menu:
-#
-# Show-AdobeInternetControl
-#
-# Example:
-#   4 { Show-AdobeInternetControl }
-# ============================================================
