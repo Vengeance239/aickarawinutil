@@ -33,22 +33,14 @@ $script:AppsConfigPath = if ($script:ConfigRoot) { Join-Path $script:ConfigRoot 
 $script:RemoteAccessCodeUrl = 'https://raw.githubusercontent.com/Vengeance239/aickarawinutil/refs/heads/main/config/access-code.json'
 $script:RemoteAppsConfigUrl = 'https://raw.githubusercontent.com/Vengeance239/aickarawinutil/refs/heads/main/config/apps.json'
 
-# --- EXTENDED FUNCTION MODULES (src/functions) ------------------------------
-# Same local-vs-remote pattern as the config loading above. Locally we just dot-source
-# every .ps1 in src/functions; remotely we pull each one's raw text and dot-source that.
-# NOTE: load order matters. ConfigExt.ps1 defines its own Import-Configuration that
-# is intentionally more tolerant of missing JSON fields than the one below - loading
-# it after this file's definition lets the later, more-robust version win, PowerShell
-# style (last function definition of a given name wins in the same scope).
-$script:FunctionsRoot = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'src\functions' } else { $null }
-$script:RemoteFunctionFiles = @(
-    'https://raw.githubusercontent.com/Vengeance239/aickarawinutil/refs/heads/main/src/functions/ConfigExt.ps1',
-    'https://raw.githubusercontent.com/Vengeance239/aickarawinutil/refs/heads/main/src/functions/CleanupExt.ps1',
-    'https://raw.githubusercontent.com/Vengeance239/aickarawinutil/refs/heads/main/src/functions/DNS.ps1',
-    'https://raw.githubusercontent.com/Vengeance239/aickarawinutil/refs/heads/main/src/functions/DiagnosticsExt.ps1',
-    'https://raw.githubusercontent.com/Vengeance239/aickarawinutil/refs/heads/main/src/functions/NetworkExt.ps1',
-    'https://raw.githubusercontent.com/Vengeance239/aickarawinutil/refs/heads/main/src/functions/Repair.ps1'
-)
+# --- FUNCTIONS MODULE LOADING: local files vs. remote (irm | iex) ----------
+# src/functions/*.ps1 files are dot-sourced on demand (not all up front) so
+# a slow/unused module never delays boot. Same local-vs-remote detection as
+# the config files above.
+$script:FunctionsRoot      = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'src\functions' } else { $null }
+$script:UtilitiesPath      = if ($script:FunctionsRoot) { Join-Path $script:FunctionsRoot 'Utilities.ps1' } else { $null }
+$script:RemoteUtilitiesUrl = 'https://raw.githubusercontent.com/Vengeance239/aickarawinutil/refs/heads/main/src/functions/Utilities.ps1'
+$script:UtilitiesLoaded    = $false
 
 $script:Cancelled = $false
 
@@ -233,19 +225,6 @@ function Invoke-PackageOptimization {
     if (Confirm-Action "apply the selected optimization ($($steps.Count) steps)" 'Only the listed conservative settings will be changed; a rollback snapshot is saved first.') { Invoke-Safely 'Package optimization' { Invoke-ProgressTask -Activity 'Applying optimization' -Steps $steps } | Out-Null }
 }
 function Invoke-Cleanup {
-    if (Get-Command Clear-TempFilesExtended -ErrorAction SilentlyContinue) {
-        Write-Host ''
-        Write-Host '1. Quick cleanup (Windows/user temp only)'
-        Write-Host '2. Extended cleanup (adds Windows Update cache / browser caches, optional)'
-        $choice = Read-Host 'Choose 1-2'
-        if ($choice -eq '2') {
-            $includeWU = (Read-Host 'Also clear Windows Update download cache? (Y/N)') -match '^[Yy]'
-            $includeBrowsers = (Read-Host 'Also clear browser caches (Chrome/Edge/Firefox)? (Y/N)') -match '^[Yy]'
-            Clear-TempFilesExtended -IncludeWindowsUpdateCache:$includeWU -IncludeBrowserCaches:$includeBrowsers
-            if ((Read-Host 'Also empty the Recycle Bin? (Y/N)') -match '^[Yy]') { Recycle-Bin-Empty }
-            return
-        }
-    }
     $targets = @($env:TEMP, "$env:WINDIR\Temp") | Where-Object { $_ -and (Test-Path $_) }
     $candidates = foreach ($target in $targets) { Get-ChildItem -LiteralPath $target -Force -File -Recurse -ErrorAction SilentlyContinue }
     $candidateCount = @($candidates).Count
@@ -264,17 +243,11 @@ function Invoke-Cleanup {
     } | Out-Null
 }
 function Invoke-Fixes {
-    Write-Host '1. Flush DNS cache (quick)'
-    Write-Host '2. System File Checker (may take time)'
-    Write-Host '3. DISM health restore (may use Windows Update)'
-    if (Get-Command Invoke-SafeRepair -ErrorAction SilentlyContinue) {
-        Write-Host '4. Full staged repair (SFC + DISM + Winsock reset + DNS flush)'
-    }
-    switch (Read-Host 'Choose 1-4') {
+    Write-Host '1. Flush DNS cache (quick)'; Write-Host '2. System File Checker (may take time)'; Write-Host '3. DISM health restore (may use Windows Update)'
+    switch (Read-Host 'Choose 1-3') {
         '1' { if (Confirm-Action 'flush the DNS resolver cache') { Invoke-Safely 'DNS flush' { Clear-DnsClientCache } | Out-Null } }
         '2' { if (Confirm-Action 'run System File Checker' 'This scans protected Windows system files and may take several minutes.') { Invoke-Safely 'SFC' { Write-Progress -Activity 'System File Checker' -Status 'Windows is reporting scan progress in this console' -PercentComplete 1; sfc /scannow; Write-Progress -Activity 'System File Checker' -Completed } | Out-Null } }
         '3' { if (Confirm-Action 'run DISM RestoreHealth' 'This repairs the Windows component store and may contact Windows Update.') { Invoke-Safely 'DISM RestoreHealth' { Write-Progress -Activity 'DISM RestoreHealth' -Status 'Windows is reporting repair progress in this console' -PercentComplete 1; DISM /Online /Cleanup-Image /RestoreHealth; Write-Progress -Activity 'DISM RestoreHealth' -Completed } | Out-Null } }
-        '4' { if (Get-Command Invoke-SafeRepair -ErrorAction SilentlyContinue) { Invoke-SafeRepair -RunSFC -RunDISM -ResetWinsock -FlushDNS } }
     }
 }
 function Invoke-WindowsActivation {
@@ -285,12 +258,9 @@ function Invoke-WindowsActivation {
 }
 function Get-PackageManager { if (Get-Command winget -ErrorAction SilentlyContinue) { 'winget' } elseif (Get-Command choco -ErrorAction SilentlyContinue) { 'choco' } else { $null } }
 function Import-Configuration {
-    # Baseline loader. src/functions/ConfigExt.ps1 defines a more tolerant version of
-    # this same function; if it loads successfully (see the module-loading block in
-    # the try{} at the bottom of this script), its definition replaces this one.
-    # This copy stays as a fallback so the script still works if that extension
-    # module can't be fetched (e.g. offline remote run).
     if ($script:IsRemoteRun) {
+        # Running via "irm <url> | iex" - there's no file on disk, so pull the config
+        # JSON straight from GitHub instead of trying to read a local config folder.
         try {
             $accessConfig = Invoke-RestMethod -Uri $script:RemoteAccessCodeUrl -UseBasicParsing
             $appsConfig   = Invoke-RestMethod -Uri $script:RemoteAppsConfigUrl -UseBasicParsing
@@ -326,6 +296,20 @@ function Import-Configuration {
         $previousApps = $script:AppBundles[$bundle.Name]
     }
     Write-Log 'Configuration loaded.' INFO
+}
+function Import-UtilitiesModule {
+    if ($script:UtilitiesLoaded) { return }
+    if ($script:IsRemoteRun) {
+        try {
+            $code = Invoke-RestMethod -Uri $script:RemoteUtilitiesUrl -UseBasicParsing
+            . ([ScriptBlock]::Create($code))
+        } catch { throw "Could not download the Utilities module: $($_.Exception.Message)" }
+    } else {
+        if (-not (Test-Path $script:UtilitiesPath)) { throw "Utilities module not found: $script:UtilitiesPath" }
+        . $script:UtilitiesPath
+    }
+    $script:UtilitiesLoaded = $true
+    Write-Log 'Utilities module loaded.' INFO
 }
 function Install-AppItem {
     param([Parameter(Mandatory)][string]$Name, [switch]$SkipConfirmation)
@@ -408,48 +392,11 @@ function Invoke-Diagnostics {
         Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | ForEach-Object { Write-Host "  DISK $($_.DeviceID)      : $([Math]::Round($_.FreeSpace/1GB,1)) GB free / $([Math]::Round($_.Size/1GB,1)) GB" -ForegroundColor White }
         Write-Host "  UPTIME       : $($uptime.Days)d $($uptime.Hours)h $($uptime.Minutes)m" -ForegroundColor White
     } catch { Write-Status "System recon partially failed: $($_.Exception.Message)" Warn }
-    Show-TimeSyncCheck
-    if (Get-Command Get-StartupAnalysis -ErrorAction SilentlyContinue) {
-        if ((Read-Host 'Also list startup programs (Registry Run keys + Startup folder)? (Y/N)') -match '^[Yy]') {
-            Get-StartupAnalysis | Format-Table Source, Name, Command, Flag -AutoSize | Out-Host
-        }
-    }
-    Write-Host '=======================================================' -ForegroundColor Green
+    Show-TimeSyncCheck; Write-Host '=======================================================' -ForegroundColor Green
 }
 function Invoke-AdvancedNetwork {
-    $extendedAvailable = Get-Command Set-DnsServers -ErrorAction SilentlyContinue
-    Write-Host 'Advanced Network Tools'
-    Write-Host '1. Display IP configuration'
-    Write-Host '2. Test a host'
-    Write-Host '3. Flush DNS cache'
-    if ($extendedAvailable) {
-        Write-Host '4. View current DNS servers'
-        Write-Host '5. Set DNS servers (Cloudflare / Google / DHCP / custom)'
-        Write-Host '6. Restore DNS from a saved snapshot'
-        Write-Host '7. Run full network diagnostics report'
-    }
-    switch (Read-Host "Choose 1-$(if ($extendedAvailable) { 7 } else { 3 })") {
-        '1' { ipconfig /all }
-        '2' { $hostName=Read-Host 'Host name or IP'; Test-Connection $hostName -Count 4 }
-        '3' { if (Confirm-Action 'flush the DNS resolver cache') { Clear-DnsClientCache; Write-Status 'DNS cache flushed.' Good } }
-        '4' { if ($extendedAvailable) { Get-DnsSettings | Format-Table -AutoSize | Out-Host } }
-        '5' {
-            if ($extendedAvailable) {
-                Write-Host '1. Cloudflare (1.1.1.1)'; Write-Host '2. Google (8.8.8.8)'; Write-Host '3. DHCP (automatic)'; Write-Host '4. Custom'
-                $preset = switch (Read-Host 'Choose 1-4') {
-                    '1' { 'Cloudflare' }; '2' { 'Google' }; '3' { 'DHCP' }
-                    '4' { $servers = (Read-Host 'Enter DNS server(s), comma separated') -split ',' | ForEach-Object { $_.Trim() }; $script:CustomDnsServers = $servers; 'Custom' }
-                    default { $null }
-                }
-                if ($preset) {
-                    if ($preset -eq 'Custom') { Set-DnsServers -Preset Custom -Servers $script:CustomDnsServers -Confirm:$false }
-                    else { Set-DnsServers -Preset $preset -Confirm:$false }
-                }
-            }
-        }
-        '6' { if ($extendedAvailable) { $path = Read-Host 'Path to snapshot JSON (leave blank to browse the data folder)'; if (-not $path) { Get-ChildItem -Path (Join-Path $script:DataRoot 'dns-snapshot_*.json') -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName | Out-Host; $path = Read-Host 'Enter the snapshot path to restore' }; if ($path) { Restore-DnsFromSnapshot -Path $path } } }
-        '7' { if ($extendedAvailable) { $target = Read-Host 'Host to test (Enter for 8.8.8.8)'; if (-not $target) { $target = '8.8.8.8' }; Test-NetworkDiagnostics -Host $target } }
-    }
+    Write-Host 'Advanced Network Tools'; Write-Host '1. Display IP configuration'; Write-Host '2. Test a host'; Write-Host '3. Flush DNS cache'
+    switch(Read-Host 'Choose 1-3') { '1' { ipconfig /all }; '2' { $hostName=Read-Host 'Host name or IP'; Test-Connection $hostName -Count 4 }; '3' { if(Confirm-Action 'flush the DNS resolver cache'){Clear-DnsClientCache;Write-Status 'DNS cache flushed.' Good} } }
 }
 function Invoke-RemoteBranch {
     if ($NoRemotePrompt) { return }
@@ -487,77 +434,30 @@ function Invoke-RemoteBranch {
 function Show-MainMenu {
     while (-not $script:Cancelled) {
         Write-Host ''; Write-Host '==================== MAIN MENU ====================' -ForegroundColor Green
-        Write-Host " 1) Package Optimizations`n 2) Cleanup`n 3) Fixes / Repairs`n 4) Activate Windows`n 5) Install / Update Apps`n 6) Diagnose / System Recon`n 7) Advanced Network Tools`n 8) Exit" -ForegroundColor White
+        Write-Host " 1) Package Optimizations`n 2) Cleanup`n 3) Fixes / Repairs`n 4) Activate Windows`n 5) Install / Update Apps`n 6) Diagnose / System Recon`n 7) Utilities`n 8) Advanced Network Tools`n 9) Exit" -ForegroundColor White
         Write-Host '=====================================================' -ForegroundColor Green
-        switch (Read-Host 'Select') { '1'{Invoke-PackageOptimization};'2'{Invoke-Cleanup};'3'{Invoke-Fixes};'4'{Invoke-WindowsActivation};'5'{Install-OrUpdate-App};'6'{Invoke-Diagnostics};'7'{Invoke-AdvancedNetwork};'8'{$script:Cancelled=$true};default{Write-Status 'Invalid selection.' Warn} }
+        switch (Read-Host 'Select') {
+            '1'{Invoke-PackageOptimization}
+            '2'{Invoke-Cleanup}
+            '3'{Invoke-Fixes}
+            '4'{Invoke-WindowsActivation}
+            '5'{Install-OrUpdate-App}
+            '6'{Invoke-Diagnostics}
+            '7'{ Invoke-Safely 'Loading Utilities module' { Import-UtilitiesModule } | Out-Null; if ($script:UtilitiesLoaded) { Invoke-Utilities } }
+            '8'{Invoke-AdvancedNetwork}
+            '9'{$script:Cancelled=$true}
+            default{Write-Status 'Invalid selection.' Warn}
+        }
         if(-not $script:Cancelled){Read-Host 'Press Enter to return to the menu' | Out-Null}
     }
 }
-
 try {
     Initialize-Storage; Ensure-Elevation
-
-    # --- Load extended function modules (src/functions) --------------------
-    # IMPORTANT: this dot-sourcing happens here, directly inside the top-level try
-    # block, and NOT inside a helper function. Dot-sourcing (the leading ".") adds
-    # whatever it loads to the CURRENT scope. If this loop were wrapped in its own
-    # function (e.g. "function Import-ExtendedFunctions { ... }"), every function
-    # defined in these files would only exist inside that function's local scope
-    # and would disappear as soon as it returned - the rest of the script (and the
-    # menu handlers) would never see Clear-TempFilesExtended, Set-DnsServers, etc.
-    # try/catch/if blocks don't introduce a new scope, so running the loop here
-    # keeps everything at script scope where Show-MainMenu and friends can use it.
-    if ($script:IsRemoteRun) {
-        foreach ($url in $script:RemoteFunctionFiles) {
-            try {
-                $code = Invoke-RestMethod -Uri $url -UseBasicParsing
-                . ([ScriptBlock]::Create($code))
-                Write-Log "Loaded remote function module: $url" INFO
-            } catch {
-                Write-Log "Failed to load remote function module $($url): $($_.Exception.Message)" WARN
-            }
-        }
-    } else {
-        if ($script:FunctionsRoot -and (Test-Path $script:FunctionsRoot)) {
-            $moduleFiles = Get-ChildItem -Path $script:FunctionsRoot -Filter '*.ps1' -File | Sort-Object Name
-            foreach ($moduleFile in $moduleFiles) {
-                try {
-                    . $moduleFile.FullName
-                    Write-Log "Loaded function module: $($moduleFile.FullName)" INFO
-                } catch {
-                    Write-Log "Failed to load function module $($moduleFile.FullName): $($_.Exception.Message)" WARN
-                }
-            }
-        } else {
-            Write-Log 'No src/functions directory found; running with core functions only.' WARN
-        }
-    }
-
     Import-Configuration
     Register-EngineEvent PowerShell.Exiting -Action { try { Add-Content -LiteralPath $script:LogPath -Value "$(Get-Date -Format u) [INFO] Utility exited." } catch {} } | Out-Null
     if (-not $SkipBootAnimation) { Show-BootSequence; Invoke-RemoteBranch; if (-not (Invoke-ActivationGate)) { exit 1 }; Offer-RestorePoint; Invoke-Diagnostics }
     Write-Log "AICKARAWINUTIL $script:Version launched by $env:USERNAME" INFO
     if ($SkipBootAnimation) { Invoke-RemoteBranch }
     Show-MainMenu
-} catch {
-    $err = $_
-
-    Write-Host ''
-    Write-Host '========== ERROR DETAILS ==========' -ForegroundColor Red
-    Write-Host "Message      : $($err.Exception.Message)" -ForegroundColor Yellow
-    Write-Host "Line         : $($err.InvocationInfo.ScriptLineNumber)" -ForegroundColor Yellow
-    Write-Host "Column       : $($err.InvocationInfo.OffsetInLine)" -ForegroundColor Yellow
-    Write-Host "Command      : $($err.InvocationInfo.MyCommand.Name)" -ForegroundColor Yellow
-    Write-Host "Script       : $($err.InvocationInfo.ScriptName)" -ForegroundColor Yellow
-    Write-Host ''
-    Write-Host 'CODE LINE:' -ForegroundColor Cyan
-    Write-Host $err.InvocationInfo.Line -ForegroundColor White
-    Write-Host ''
-    Write-Host 'POSITION:' -ForegroundColor Cyan
-    Write-Host $err.InvocationInfo.PositionMessage -ForegroundColor White
-    Write-Host '===================================' -ForegroundColor Red
-
-    Write-Log "Fatal error: $($err.Exception.Message)" ERROR
-    Write-Status "Stopped safely: $($err.Exception.Message)" Bad
-    exit 1
-}
+} catch { Write-Log "Fatal error: $($_.Exception.Message)" ERROR; Write-Status "Stopped safely: $($_.Exception.Message)" Bad; exit 1 }
+finally { Write-Log 'AICKARAWINUTIL session ended.' INFO; Write-Host 'AICKARAWINUTIL closed. No further actions will be taken.' -ForegroundColor Cyan }
